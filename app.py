@@ -49,7 +49,7 @@ if check_password():
                                 'Deadline': [10, 12, 16, 12, 28]})
     Incomes = pd.DataFrame({'Source': ["Infy"],
                             'FY': ["FY2324"],
-                            'Ammount': [50000.00], })
+                            'Ammount': [5100.00], })
 
     month = st.sidebar.selectbox("Select Month", range(1, 13),
                                  format_func=lambda x: datetime(1900, x, 1).strftime('%B'), index=today_month - 1)
