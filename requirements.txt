@@ -1,0 +1,6 @@
+streamlit
+pandas
+numpy
+holidays
+PyPDF2
+plotly
