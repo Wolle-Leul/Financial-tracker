@@ -8,7 +8,8 @@ import PyPDF2 as PDF
 import pandas as pd 
 import re
 import numpy as np
-
+st.set_page_config(page_title="Tracker", page_icon=":chart_with_upwards_trend:", layout="wide")
+# Sidebar for month and year selection
 def check_password():
     def password_entered():
         if st.session_state["password"] == st.secrets["password"]:
@@ -49,8 +50,7 @@ if check_password():
     Incomes = pd.DataFrame({'Source': ["Infy"],
                             'FY': ["FY2324"],
                             'Ammount': [50000.00], })
-    st.set_page_config(page_title="Tracker", page_icon=":chart_with_upwards_trend:", layout="wide")
-    # Sidebar for month and year selection
+
     month = st.sidebar.selectbox("Select Month", range(1, 13),
                                  format_func=lambda x: datetime(1900, x, 1).strftime('%B'), index=today_month - 1)
     year = st.sidebar.selectbox("Select Year", range(today_year - 1, today_year + 1), index=1)
