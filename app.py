@@ -8,7 +8,7 @@ import PyPDF2 as PDF
 import pandas as pd 
 import re
 import numpy as np
-from transformers import pipeline
+
 def check_password():
     def password_entered():
         if st.session_state["password"] == st.secrets["password"]:
