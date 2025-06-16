@@ -4,3 +4,4 @@ numpy
 holidays
 PyPDF2
 plotly
+matplotlib
