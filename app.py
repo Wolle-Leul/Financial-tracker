@@ -45,7 +45,7 @@ if check_password():
     holiday_df = pd.DataFrame(holiday_data)
     Inavitables = pd.DataFrame({'Catagory': ["Utlities", "Utlities", "Entertainment", "Housing", "Groceries"],
                                 'Sub-Catagory': ["Phone", "Utlities", "You Tube", "Rent", "Groceries"],
-                                'Ammount': [35.00, 70.00, 0.00, 2000.00, 800.00],
+                                'Ammount': [35.00, 70.00, 0.00, 2250.00, 800.00],
                                 'Deadline': [10, 12, 16, 12, 28]})
     Incomes = pd.DataFrame({'Source': ["Infy"],
                             'FY': ["FY2324"],
