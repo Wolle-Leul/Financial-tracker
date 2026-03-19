@@ -5,3 +5,8 @@ holidays
 PyPDF2
 plotly
 matplotlib
+SQLAlchemy
+alembic
+psycopg[binary]
+bcrypt
+pytest
