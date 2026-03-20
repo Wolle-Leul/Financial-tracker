@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import textwrap
 from datetime import datetime
 from typing import List, Optional
 
@@ -82,7 +83,7 @@ def generate_calendar_html(
 
     month_label = datetime(year, month, 1).strftime("%B %Y")
 
-    return f"""
+    html = f"""
 <div class="calWrap" aria-label="Calendar {month_label}">
   <div class="calTitleRow">
     <div class="calTitle">{_escape_html(month_label)}</div>
@@ -247,6 +248,8 @@ def generate_calendar_html(
     border: 3px solid var(--today);
   }}
 </style>
-""".strip()
+"""
+    # Dedent to avoid markdown treating leading spaces as code blocks.
+    return textwrap.dedent(html).strip()
 
 
