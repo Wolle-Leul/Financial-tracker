@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import hmac
-
 import streamlit as st
 
-import bcrypt
-
+from finance_tracker.auth_backend import verify_password
 from finance_tracker.config import get_config
 
 
@@ -24,17 +21,7 @@ def check_password() -> bool:
 
     def password_entered() -> None:
         raw = st.session_state.get("password") or ""
-
-        if cfg.password_hash:
-            try:
-                st.session_state["password_correct"] = bcrypt.checkpw(
-                    raw.encode("utf-8"), cfg.password_hash.encode("utf-8")
-                )
-            except Exception:
-                st.session_state["password_correct"] = False
-        else:
-            # Dev/local fallback: constant-time comparison.
-            st.session_state["password_correct"] = hmac.compare_digest(raw, str(cfg.password))
+        st.session_state["password_correct"] = verify_password(raw)
 
         if st.session_state["password_correct"]:
             # Remove password after verification to reduce accidental leakage.

@@ -10,3 +10,7 @@ alembic
 psycopg[binary]
 bcrypt
 pytest
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
