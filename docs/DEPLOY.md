@@ -13,10 +13,12 @@ The app is split into two deployable units:
 | `PASSWORD_HASH` | Bcrypt hash for the dashboard password (recommended). |
 | `PASSWORD` | Plaintext password (dev only; prefer `PASSWORD_HASH`). |
 | `SESSION_SECRET` | Secret for signing session cookies (set a long random string in production). |
-| `CORS_ORIGINS` | Comma-separated list of allowed browser origins, e.g. `https://yourdomain.com,https://www.yourdomain.com`. Must match the **exact** URL of your Hostinger site (no path, no trailing slash). |
-| `SESSION_SAME_SITE` | Set to **`none`** on Render when the SPA is on a **different domain** than the API (e.g. Hostinger + Render). Required so the browser sends session cookies on API requests. API must be served over **HTTPS**. Leave unset for local dev (`lax`). |
+| `CORS_ORIGINS` | Comma-separated list of allowed browser origins, e.g. `https://yourdomain.com,https://www.yourdomain.com`. |
+| `SESSION_SAME_SITE` | Set to **`none`** when the SPA is on a **different domain** than the API (e.g. Hostinger + Render). Required so the browser sends the session cookie on cross-origin `fetch` requests. Use HTTPS on both sides. If unset, the API defaults to `lax` (fine for local dev with the Vite proxy only). |
 
 If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `http://127.0.0.1:5173` for local development.
+
+**Hostinger + Render:** After a correct password, if the app returns to the login screen or shows a session error, almost always **`SESSION_SAME_SITE` is not `none`** on Render and/or **`CORS_ORIGINS` does not exactly match** your Hostinger URL (scheme + host, no path, no trailing slash).
 
 ## Hostinger (frontend)
 
@@ -32,11 +34,10 @@ export DB_URL="postgresql+psycopg://..."
 export PASSWORD_HASH='...'
 export SESSION_SECRET='...'
 export CORS_ORIGINS='https://your-spa-hostinger-domain.com'
-export SESSION_SAME_SITE='none'
 uvicorn run_api:app --host 0.0.0.0 --port 8000
 ```
 
-Use HTTPS in front of Uvicorn (reverse proxy or platform TLS). With `SESSION_SAME_SITE=none`, the app sets secure session cookies suitable for cross-origin SPAs.
+Use HTTPS in front of Uvicorn (reverse proxy or platform TLS). Session cookies should be sent only over HTTPS in production; you may set `https_only=True` on `SessionMiddleware` in code when ready.
 
 ## Local development
 
