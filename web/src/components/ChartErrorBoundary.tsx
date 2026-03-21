@@ -19,7 +19,9 @@ export default class ChartErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <p className="muted">Chart could not be displayed. Try another month or reload.</p>
+          <div className="chart-fallback">
+            Income → expenses chart could not be rendered (browser or data). Try another month or reload the page.
+          </div>
         )
       )
     }
