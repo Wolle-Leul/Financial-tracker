@@ -57,7 +57,7 @@ export async function authMe(): Promise<boolean> {
   return Boolean(j.authenticated)
 }
 
-export type KpiItem = { title: string; value: string; subtitle: string }
+export type KpiItem = { title: string; value: string; subtitle: string; kind?: string }
 
 export type DashboardResponse = {
   kpis: KpiItem[]
@@ -289,4 +289,42 @@ export async function fetchTrends(months = 12): Promise<TrendsResponse> {
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) throw new Error(await r.text())
   return r.json() as Promise<TrendsResponse>
+}
+
+export type BudgetCategory = {
+  id: number
+  name: string
+  subcategories: Array<{ id: number; category_id: number; name: string }>
+}
+
+export type BudgetLabelsResponse = { categories: BudgetCategory[] }
+
+export async function fetchBudgetLabels(): Promise<BudgetLabelsResponse> {
+  const r = await apiFetch('/api/budget-labels')
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) throw new Error(await r.text())
+  return r.json() as Promise<BudgetLabelsResponse>
+}
+
+export async function createSubcategory(body: {
+  category_id: number
+  name: string
+  match_keywords?: string | null
+}): Promise<{ id: number; category_id: number; name: string }> {
+  const r = await apiFetch('/api/subcategories', { method: 'POST', body: JSON.stringify(body) })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<{ id: number; category_id: number; name: string }>
+}
+
+export async function deleteSubcategory(id: number): Promise<void> {
+  const r = await apiFetch(`/api/subcategories/${id}`, { method: 'DELETE' })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
 }

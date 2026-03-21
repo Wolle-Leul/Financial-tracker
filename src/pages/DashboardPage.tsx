@@ -47,6 +47,7 @@ export default function DashboardPage() {
   })
   const [mapTxnId, setMapTxnId] = useState<number | null>(null)
   const [mapSubcatId, setMapSubcatId] = useState<number | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   /** Must be true before any API call that needs the session cookie (avoids racing /auth/me). */
   const [authReady, setAuthReady] = useState(false)
 
@@ -187,97 +188,22 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <section className="panel filters-panel">
-        <div className="panel-header">
-          <h2>Filters</h2>
-          <p className="panel-desc">Choose the period and optionally narrow by category.</p>
-        </div>
-        <div className="filter-row-dates">
-          <label className="label">
-            Year
-            <select
-              className="input"
-              value={year}
-              onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="label">
-            Month
-            <select
-              className="input"
-              value={month}
-              onChange={(e) => setMonth(parseInt(e.target.value, 10))}
-            >
-              {MONTHS.map((name, i) => (
-                <option key={name} value={i + 1}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="filter-row-lists">
-          <label className="label grow">
-            Categories (optional)
-            <select
-              className="input"
-              multiple
-              size={Math.min(6, Math.max(3, d.filter_categories.length || 3))}
-              value={categories}
-              onChange={(e) => {
-                const opts = Array.from(e.target.selectedOptions).map((o) => o.value)
-                setCategories(opts)
-                setSubcategories([])
-              }}
-            >
-              {d.filter_categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="label grow">
-            Sub-categories (optional)
-            <select
-              className="input"
-              multiple
-              size={Math.min(6, Math.max(3, d.filter_subcategories.length || 3))}
-              value={subcategories}
-              onChange={(e) =>
-                setSubcategories(Array.from(e.target.selectedOptions).map((o) => o.value))
-              }
-            >
-              {d.filter_subcategories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <p className="hint">
-          Tip: hold <kbd>Ctrl</kbd> (Windows) or <kbd>⌘</kbd> (Mac) while clicking to select several
-          categories or sub-categories.
-        </p>
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <h2>Important metrics</h2>
-          <p className="panel-desc">Snapshot for the selected month — hover cards for emphasis.</p>
+      <section className="panel kpi-deck">
+        <div className="panel-header kpi-deck-header">
+          <div>
+            <h2>At a glance</h2>
+            <p className="panel-desc">
+              Salary-window snapshot for {MONTHS[month - 1]} {year}. Values stay 0 until you import transactions or set
+              expected income in Settings.
+            </p>
+          </div>
         </div>
         <div className="kpi-grid">
           {d.kpis.map((k, i) => (
             <div
               key={k.title}
-              className={i === 0 ? 'kpi-card kpi-card--hero' : 'kpi-card'}
+              data-kpi={k.kind ?? 'default'}
+              className={`kpi-card kpi-card--kind-${k.kind ?? 'default'}${i === 0 ? ' kpi-card--hero' : ''}`}
             >
               <div className="kpi-title">{k.title}</div>
               <div className="kpi-value">{k.value}</div>
@@ -286,6 +212,93 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
+
+      <div className="dash-toolbar">
+        <div className="dash-toolbar-period">
+          <label className="label label--inline">
+            <span className="label-text">Period</span>
+            <select className="input input--compact" value={year} onChange={(e) => setYear(parseInt(e.target.value, 10))}>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="label label--inline">
+            <select className="input input--compact" value={month} onChange={(e) => setMonth(parseInt(e.target.value, 10))}>
+              {MONTHS.map((name, i) => (
+                <option key={name} value={i + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button type="button" className="btn ghost dash-toolbar-filters-btn" onClick={() => setFiltersOpen((o) => !o)}>
+          {filtersOpen ? 'Hide' : 'Narrow by'} category / sub-category
+          <span className="dash-toolbar-chevron" aria-hidden>
+            {filtersOpen ? '▴' : '▾'}
+          </span>
+        </button>
+        {(categories.length > 0 || subcategories.length > 0) && (
+          <span className="dash-toolbar-active-filters muted small">
+            {categories.length + subcategories.length} filter{categories.length + subcategories.length === 1 ? '' : 's'} active
+          </span>
+        )}
+      </div>
+
+      {filtersOpen ? (
+        <section className="panel filters-panel filters-panel--secondary">
+          <div className="panel-header">
+            <h2>Optional filters</h2>
+            <p className="panel-desc">Refine the chart and tables. Leave empty to see everything.</p>
+          </div>
+          <div className="filter-row-lists">
+            <label className="label grow">
+              Categories
+              <select
+                className="input"
+                multiple
+                size={Math.min(6, Math.max(3, d.filter_categories.length || 3))}
+                value={categories}
+                onChange={(e) => {
+                  const opts = Array.from(e.target.selectedOptions).map((o) => o.value)
+                  setCategories(opts)
+                  setSubcategories([])
+                }}
+              >
+                {d.filter_categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="label grow">
+              Sub-categories
+              <select
+                className="input"
+                multiple
+                size={Math.min(6, Math.max(3, d.filter_subcategories.length || 3))}
+                value={subcategories}
+                onChange={(e) =>
+                  setSubcategories(Array.from(e.target.selectedOptions).map((o) => o.value))
+                }
+              >
+                {d.filter_subcategories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="hint">
+            <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+click for multiple. Clear selections to reset.
+          </p>
+        </section>
+      ) : null}
 
       <div className="grid-3">
         <section className="panel">
