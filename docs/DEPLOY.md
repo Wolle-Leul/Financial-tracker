@@ -42,6 +42,17 @@ If logs show **`Form data requires "python-multipart"`**, the build must install
 
 Run it from the **repository root** (the folder that contains `requirements.txt` and `finance_tracker/`).
 
+### Database migrations (PostgreSQL)
+
+The API runs **Alembic `upgrade head` on startup** (unless `SKIP_DB_MIGRATIONS=1`). If you deployed new code before migrations existed, you may have seen errors like `column salary_rules.budget_strategy does not exist` — redeploy the latest API; startup also runs an **idempotent `ensure_schema`** that adds `budget_strategy` and the `income_sources` table when missing.
+
+To run migrations manually on Render (shell):
+
+```bash
+cd $RENDER_PROJECT_ROOT   # repo root
+PYTHONPATH=. alembic upgrade head
+```
+
 ### Start command (use this — avoids `run_api.py` path issues)
 
 Prefer loading the app from the package (works even if **Root Directory** or missing `run_api.py` confuses Render):
