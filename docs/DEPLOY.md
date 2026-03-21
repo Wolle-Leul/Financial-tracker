@@ -38,6 +38,8 @@ If you still see “session cookie” errors: check the browser is not blocking 
 pip install -r requirements.txt
 ```
 
+If logs show **`Form data requires "python-multipart"`**, the build must install dependencies from `requirements.txt` (that package is listed there for `POST /api/imports/pdf`).
+
 Run it from the **repository root** (the folder that contains `requirements.txt` and `finance_tracker/`).
 
 ### Start command (use this — avoids `run_api.py` path issues)

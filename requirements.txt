@@ -13,5 +13,6 @@ itsdangerous>=2.0
 # API (Render / production) — was missing; caused `uvicorn: command not found` on Render
 fastapi>=0.109
 uvicorn[standard]>=0.27
+python-multipart>=0.0.9
 pydantic>=2
 pytest
