@@ -280,15 +280,7 @@ kbd {
   background: var(--surface-hover);
 }
 
-.kpi-card:nth-child(3n + 1) {
-  border-left-color: var(--accent);
-}
-.kpi-card:nth-child(3n + 2) {
-  border-left-color: var(--good);
-}
-.kpi-card:nth-child(3n + 3) {
-  border-left-color: var(--violet);
-}
+/* Border accent comes from .kpi-card--kind-* (see KPI deck section below) */
 
 .kpi-card--hero {
   grid-column: span 2;
@@ -697,4 +689,167 @@ kbd {
 
 .expected-income-banner strong {
   color: var(--text);
+}
+
+/* —— Dashboard toolbar (period + optional filters) —— */
+.dash-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(165deg, rgba(18, 24, 38, 0.65) 0%, rgba(8, 10, 14, 0.4) 100%);
+}
+
+.dash-toolbar-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.label--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label--inline .label-text {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.input--compact {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.875rem;
+  min-width: 7rem;
+}
+
+.dash-toolbar-filters-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.dash-toolbar-chevron {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.dash-toolbar-active-filters {
+  margin-left: auto;
+}
+
+.filters-panel--secondary {
+  margin-bottom: 1.25rem;
+}
+
+/* —— KPI deck —— */
+.kpi-deck {
+  border: 1px solid rgba(110, 184, 255, 0.25);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(165deg, rgba(23, 29, 46, 0.95) 0%, rgba(14, 18, 25, 0.98) 100%);
+}
+
+.kpi-deck-header {
+  margin-bottom: 1.25rem;
+}
+
+.kpi-card--kind-cash.kpi-card--hero {
+  grid-column: span 2;
+  border-left-color: var(--accent);
+  background: linear-gradient(125deg, rgba(110, 184, 255, 0.12) 0%, rgba(8, 10, 14, 0.5) 55%, var(--bg) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.kpi-card--kind-cash.kpi-card--hero .kpi-value {
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-weight: 650;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.kpi-card--kind-default {
+  border-left-color: var(--border-strong);
+}
+
+.kpi-card--kind-rate {
+  border-left-color: var(--good);
+}
+
+.kpi-card--kind-burn {
+  border-left-color: var(--warn);
+}
+
+.kpi-card--kind-groceries {
+  border-left-color: #67e8f9;
+}
+
+.kpi-card--kind-target {
+  border-left-color: var(--violet);
+}
+
+.kpi-card--kind-budget {
+  border-left-color: #f472b6;
+}
+
+.kpi-card--kind-bills {
+  border-left-color: #94a3b8;
+}
+
+.kpi-card--kind-timing {
+  border-left-color: #38bdf8;
+}
+
+.kpi-card--kind-forecast {
+  border-left-color: #c4b5fd;
+}
+
+.kpi-card--kind-import {
+  border-left-color: #f472b6;
+}
+
+.kpi-card--kind-top {
+  border-left-color: #fb923c;
+}
+
+.kpi-sub {
+  max-width: 42ch;
+}
+
+/* —— Settings —— */
+.settings-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.settings-cta-dash {
+  background: linear-gradient(180deg, #22c55e 0%, #15803d 100%) !important;
+  border-color: #4ade80 !important;
+  color: #fff !important;
+}
+
+.settings-cta-dash:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.settings-hint {
+  margin-top: 1rem;
+}
+
+.budget-line-form {
+  margin-bottom: 1rem;
+}
+
+.budget-lines-table {
+  margin-top: 1rem;
 }

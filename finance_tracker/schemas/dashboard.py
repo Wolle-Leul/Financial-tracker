@@ -13,6 +13,7 @@ class KpiItem(BaseModel):
     title: str
     value: str
     subtitle: str
+    kind: Optional[str] = "default"
 
 
 class ToPayRow(BaseModel):

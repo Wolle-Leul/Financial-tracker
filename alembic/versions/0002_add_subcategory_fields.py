@@ -9,14 +9,27 @@ branch_labels = None
 depends_on = None
 
 
+def _subcategory_columns() -> set[str]:
+    conn = op.get_bind()
+    return {c["name"] for c in sa.inspect(conn).get_columns("subcategories")}
+
+
 def upgrade() -> None:
-    op.add_column("subcategories", sa.Column("planned_amount", sa.Numeric(14, 2), nullable=True))
-    op.add_column("subcategories", sa.Column("planned_deadline_day", sa.Integer(), nullable=True))
-    op.add_column("subcategories", sa.Column("match_keywords", sa.Text(), nullable=True))
+    cols = _subcategory_columns()
+    if "planned_amount" not in cols:
+        op.add_column("subcategories", sa.Column("planned_amount", sa.Numeric(14, 2), nullable=True))
+    if "planned_deadline_day" not in cols:
+        op.add_column("subcategories", sa.Column("planned_deadline_day", sa.Integer(), nullable=True))
+    if "match_keywords" not in cols:
+        op.add_column("subcategories", sa.Column("match_keywords", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("subcategories", "match_keywords")
-    op.drop_column("subcategories", "planned_deadline_day")
-    op.drop_column("subcategories", "planned_amount")
+    cols = _subcategory_columns()
+    if "match_keywords" in cols:
+        op.drop_column("subcategories", "match_keywords")
+    if "planned_deadline_day" in cols:
+        op.drop_column("subcategories", "planned_deadline_day")
+    if "planned_amount" in cols:
+        op.drop_column("subcategories", "planned_amount")
 

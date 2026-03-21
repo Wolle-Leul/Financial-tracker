@@ -24,6 +24,7 @@ class KpiCard:
     title: str
     value: str
     subtitle: str
+    kind: str = "default"
 
 
 def resolve_budget_target_ratio(strategy: str, stored: float) -> float:
@@ -228,6 +229,7 @@ def compute_kpi_cards(
     top_category_amount: float,
     effective_target_ratio: float = 0.45,
     budget_strategy: str = "custom_target_ratio",
+    expected_income_net: Optional[float] = None,
 ) -> List[KpiCard]:
     """
     Compute the KPI card payload used by the UI.
@@ -239,32 +241,72 @@ def compute_kpi_cards(
     savings_rate = (cash_left / income_total_safe) * 100 if income_total_safe > 0 else 0.0
     groceries_share = (groceries_total / expense_total) * 100 if expense_total > 0 else 0.0
     burn_rate = (expense_total / days_from_prev_salary) if days_from_prev_salary > 0 else 0.0
+    exp_note = ""
+    if income_total <= 0 and expected_income_net and expected_income_net > 0:
+        exp_note = f" Expected net in Settings: {expected_income_net:,.0f} PLN — import a statement to see actuals."
+    elif income_total <= 0:
+        exp_note = " Add expected income in Settings and import a bank PDF to populate this window."
 
     def _signed_pln(val: float) -> str:
         sign = "+" if val >= 0 else ""
         return f"{sign}{val:,.0f} PLN"
 
+    savings_sub = "Cash left ÷ income in this salary window"
+    if income_total_safe <= 0:
+        savings_sub = "Needs bank income in the window" + (exp_note or "")
+
+    burn_sub = "Average daily spend since last salary day"
+    if days_from_prev_salary <= 0:
+        burn_sub = "Salary window just started — needs a few days of data"
+    elif expense_total <= 0:
+        burn_sub = "No spending in window yet" + exp_note
+
+    groceries_sub = "Share of total expenses tagged as groceries"
+    if expense_total <= 0:
+        groceries_sub = "No expenses in window — import or categorize transactions"
+
+    top_sub = f"{top_category_amount:,.0f} PLN in window"
+    if top_category_amount <= 0:
+        top_sub = "No categorized spending yet in this window"
+
     kpis = [
-        KpiCard("Cash left until next salary", f"{cash_left:,.0f} PLN", "Income - spending in salary window"),
-        KpiCard("Savings rate", f"{savings_rate:.1f}%", "Cash left / income"),
+        KpiCard(
+            "Cash left until next salary",
+            f"{cash_left:,.0f} PLN",
+            ("Income − spending in this salary window." + exp_note).strip(),
+            "cash",
+        ),
+        KpiCard("Savings rate", f"{savings_rate:.1f}%", savings_sub, "rate"),
         KpiCard(
             "Daily spend (burn rate)",
             f"{burn_rate:,.0f} PLN/day" if days_from_prev_salary > 0 else "—",
-            "Expenses pace",
+            burn_sub,
+            "burn",
         ),
-        KpiCard("Groceries share of spending", f"{groceries_share:.1f}%", "Groceries / total expenses"),
+        KpiCard("Groceries share of spending", f"{groceries_share:.1f}%", groceries_sub, "groceries"),
         KpiCard(
             "Target progress (ΔTarget%)",
             f"{target_vs_actual_percent:.1f}%",
-            f"Vs {effective_target_ratio * 100:.0f}% ratio ({budget_strategy})",
+            f"Compared to {effective_target_ratio * 100:.0f}% target ({budget_strategy})",
+            "target",
         ),
-        KpiCard("Budget variance (selected)", _signed_pln(budget_variance), "Actual - planned"),
-        KpiCard("Budget remaining (selected)", _signed_pln(budget_remaining), "Planned - actual"),
-        KpiCard("Upcoming bills (30d)", f"{upcoming_bills_count}", "Based on planned deadlines"),
-        KpiCard("Salary timing", f"{days_till_next_salary}d", f"{days_from_prev_salary}d since prev salary"),
-        KpiCard("Forecast end-of-window net", f"{forecast_net:,.0f} PLN", "Based on current burn rate"),
-        KpiCard("Import quality", import_quality_value, import_quality_sub),
-        KpiCard("Top spending category", f"{top_category_name}", f"{top_category_amount:,.0f} PLN in window"),
+        KpiCard("Budget variance (selected)", _signed_pln(budget_variance), "Actual spend − planned (filtered rows)", "budget"),
+        KpiCard("Budget remaining (selected)", _signed_pln(budget_remaining), "Planned − actual for your selection", "budget"),
+        KpiCard("Upcoming bills (30d)", f"{upcoming_bills_count}", "Planned lines with a deadline in the next 30 days", "bills"),
+        KpiCard(
+            "Salary timing",
+            f"{days_till_next_salary}d",
+            f"{days_from_prev_salary}d since previous salary — from your pay-day setting",
+            "timing",
+        ),
+        KpiCard(
+            "Forecast end-of-window net",
+            f"{forecast_net:,.0f} PLN",
+            "If spending pace continues to end of window",
+            "forecast",
+        ),
+        KpiCard("Import quality", import_quality_value, import_quality_sub, "import"),
+        KpiCard("Top spending category", f"{top_category_name}", top_sub, "top"),
     ]
 
     return kpis
