@@ -3,6 +3,11 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
+revision = "0004_income_budget"
+down_revision = "0003_import_quality"
+branch_labels = None
+depends_on = None
+
 
 def upgrade() -> None:
     op.add_column(

@@ -16,6 +16,8 @@ from finance_tracker.config import (
     get_session_same_site,
     get_session_secret_value,
 )
+from finance_tracker.db.ensure_schema import ensure_schema_extensions
+from finance_tracker.db.migrate_up import migrate_upgrade
 from finance_tracker.db.session import get_engine
 
 _uvicorn_log = logging.getLogger("uvicorn.error")
@@ -36,6 +38,15 @@ def _session_middleware_kwargs() -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        migrate_upgrade()
+    except Exception as e:
+        _uvicorn_log.warning("Alembic upgrade failed (will try ensure_schema): %s", e)
+    try:
+        ensure_schema_extensions()
+    except Exception as e:
+        _uvicorn_log.exception("ensure_schema_extensions failed: %s", e)
+        raise
     yield
 
 
