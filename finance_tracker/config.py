@@ -56,3 +56,27 @@ def get_config() -> AppConfig:
         target_ratio=float(_get_secret("target_ratio") or 0.45),
     )
 
+
+def get_cors_origin_list() -> list[str]:
+    """
+    Browser origins allowed to call the API with credentials (cookies).
+    SPA on Hostinger + API on Render must list the exact HTTPS origin(s), e.g.
+    https://yoursite.hostingersite.com — no trailing slash.
+    """
+    raw = _get_secret("cors_origins") or ""
+    if not raw:
+        raw = os.getenv("CORS_ORIGINS") or ""
+    parts = [p.strip() for p in str(raw).split(",") if p.strip()]
+    if not parts:
+        return ["http://127.0.0.1:5173", "http://localhost:5173"]
+    return parts
+
+
+def get_session_secret_value() -> str:
+    secret = _get_secret("session_secret")
+    if not secret:
+        secret = os.getenv("SESSION_SECRET")
+    if not secret:
+        return "dev-session-secret-not-for-production"
+    return secret
+

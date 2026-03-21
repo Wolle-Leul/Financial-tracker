@@ -1,10 +1,12 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '../api/client'
+import { authMe, login } from '../api/client'
 
 export default function LoginPage() {
   const nav = useNavigate()
+  const qc = useQueryClient()
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -15,6 +17,13 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(password)
+      const sessionOk = await authMe()
+      if (!sessionOk) {
+        throw new Error(
+          'Password accepted but the session cookie was not saved. On Render set SESSION_SAME_SITE=none (HTTPS), and set CORS_ORIGINS to this site’s exact origin (https://…, no trailing slash).',
+        )
+      }
+      qc.removeQueries({ queryKey: ['dashboard'] })
       nav('/', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')

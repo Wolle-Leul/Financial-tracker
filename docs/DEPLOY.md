@@ -14,8 +14,11 @@ The app is split into two deployable units:
 | `PASSWORD` | Plaintext password (dev only; prefer `PASSWORD_HASH`). |
 | `SESSION_SECRET` | Secret for signing session cookies (set a long random string in production). |
 | `CORS_ORIGINS` | Comma-separated list of allowed browser origins, e.g. `https://yourdomain.com,https://www.yourdomain.com`. |
+| `SESSION_SAME_SITE` | Set to **`none`** when the SPA is on a **different domain** than the API (e.g. Hostinger + Render). Required so the browser sends the session cookie on cross-origin `fetch` requests. Use HTTPS on both sides. If unset, the API defaults to `lax` (fine for local dev with the Vite proxy only). |
 
 If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `http://127.0.0.1:5173` for local development.
+
+**Hostinger + Render:** After a correct password, if the app returns to the login screen or shows a session error, almost always **`SESSION_SAME_SITE` is not `none`** on Render and/or **`CORS_ORIGINS` does not exactly match** your Hostinger URL (scheme + host, no path, no trailing slash).
 
 ## Hostinger (frontend)
 
