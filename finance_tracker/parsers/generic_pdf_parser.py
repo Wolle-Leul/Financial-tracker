@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -111,7 +112,8 @@ def _extract_text_from_pdf(pdf_bytes: bytes) -> str:
             "PyPDF2 is required for PDF text extraction. Install it (see requirements.txt)."
         ) from e
 
-    reader = PyPDF2.PdfReader(pdf_bytes)
+    # PyPDF2 expects a seekable stream, not raw bytes.
+    reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
     parts: List[str] = []
     for page in reader.pages:
         text = page.extract_text() or ""
