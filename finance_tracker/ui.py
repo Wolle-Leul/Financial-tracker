@@ -13,11 +13,12 @@ from .calendar_plot import generate_calendar_html
 from .charts import make_sankey_income_expense
 from .demo_data import get_demo_incomes
 from .holidays import get_holidays_poland
-from .metrics import compute_dashboard_metrics_from_db, compute_kpi_cards
+from .metrics import compute_dashboard_metrics_from_db, compute_kpi_cards, resolve_budget_target_ratio
 from .salary import compute_salary_dates
 from .services.import_service import import_statement_pdf
 from .db.models import Category, Import as ImportModel, SubCategory, Transaction
 from .db.seed import ensure_demo_categories_seeded
+from .db.salary_rule import get_or_create_salary_rule
 from .db.session import session_scope
 from .db.user import get_or_create_default_user_id
 
@@ -81,6 +82,7 @@ def render_app() -> None:
 
     user_id = get_or_create_default_user_id()
     ensure_demo_categories_seeded(user_id)
+    salary_rule = get_or_create_salary_rule(user_id)
     expenses_all = _load_expenses_plan(user_id)
 
     # Sidebar: month and year used for calendar only.
@@ -194,7 +196,11 @@ def render_app() -> None:
     ref_day = min(today.day, calendar.monthrange(year, month)[1])
     reference_date = datetime(year, month, ref_day)
 
-    salary_prev_month, due_salary_date = compute_salary_dates(reference_date, holidays_all)
+    salary_prev_month, due_salary_date = compute_salary_dates(
+        reference_date,
+        holidays_all,
+        salary_day_of_month=int(salary_rule.salary_day_of_month),
+    )
 
     # Query imported transactions within the current salary window.
     selected_subcat_names = set(expenses_filtered["SubCategory"].tolist())
@@ -244,6 +250,8 @@ def render_app() -> None:
         expense_total=expense_total,
         groceries_total=groceries_total,
         expense_amounts_by_subcategory=expense_amounts_by_subcategory,
+        target_ratio=float(salary_rule.target_ratio),
+        budget_strategy=str(salary_rule.budget_strategy),
     )
 
     # -------------------------
@@ -334,6 +342,7 @@ def render_app() -> None:
             import_quality_value = "0%"
             import_quality_sub = f"{int(latest_import.parse_warnings_count or 0)} warnings"
 
+    eff_tr = resolve_budget_target_ratio(str(salary_rule.budget_strategy), float(salary_rule.target_ratio))
     kpi_cards = compute_kpi_cards(
         cash_left=cash_left,
         income_total=income_total,
@@ -350,6 +359,8 @@ def render_app() -> None:
         import_quality_sub=import_quality_sub,
         top_category_name=top_category_name,
         top_category_amount=top_category_amount,
+        effective_target_ratio=eff_tr,
+        budget_strategy=str(salary_rule.budget_strategy),
     )
 
     kpis = [(c.title, c.value, c.subtitle) for c in kpi_cards]
@@ -377,7 +388,13 @@ def render_app() -> None:
         with st.expander("Calendar", expanded=False):
             st.subheader("📅 Calendar")
             st.markdown(
-                generate_calendar_html(year=year, month=month, holidays=holidays_all, today=today),
+                generate_calendar_html(
+                    year=year,
+                    month=month,
+                    holidays=holidays_all,
+                    today=today,
+                    salary_date=int(salary_rule.salary_day_of_month),
+                ),
                 unsafe_allow_html=True,
             )
 

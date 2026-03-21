@@ -58,6 +58,24 @@ class SalaryRule(Base):
     salary_day_of_month: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     holiday_country: Mapped[str] = mapped_column(String(60), nullable=False, default="Poland")
     target_ratio: Mapped[float] = mapped_column(Numeric(6, 3), nullable=False, default=0.45)
+    # Presets: custom_target_ratio, classic_50_30_20, zero_based, salary_window_only
+    budget_strategy: Mapped[str] = mapped_column(String(64), nullable=False, default="custom_target_ratio")
+
+    user: Mapped[User] = relationship("User")
+
+
+class IncomeSource(Base):
+    __tablename__ = "income_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    label: Mapped[str] = mapped_column(String(120), nullable=False, default="Income")
+    employer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contract_type: Mapped[str] = mapped_column(String(64), nullable=False, default="other")
+    gross_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    net_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    use_net_only: Mapped[bool] = mapped_column(default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     user: Mapped[User] = relationship("User")
 

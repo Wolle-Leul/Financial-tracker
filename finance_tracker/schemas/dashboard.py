@@ -44,6 +44,8 @@ class DashboardResponse(BaseModel):
     to_pay_empty_reason: Optional[str] = None
     import_quality_value: str
     import_quality_sub: str
+    expected_income_net: Optional[float] = None
+    income_variance_vs_expected_percent: Optional[float] = None
 
 
 class UncategorizedItem(BaseModel):

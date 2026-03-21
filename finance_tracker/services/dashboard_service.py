@@ -12,9 +12,15 @@ from finance_tracker.calendar_plot import generate_calendar_html
 from finance_tracker.charts import make_sankey_income_expense
 from finance_tracker.config import get_config
 from finance_tracker.db.models import Category, Import as ImportModel, SubCategory, Transaction
+from finance_tracker.db.salary_rule import get_or_create_salary_rule
 from finance_tracker.db.session import session_scope
 from finance_tracker.holidays import get_holidays_poland
-from finance_tracker.metrics import compute_dashboard_metrics_from_db, compute_kpi_cards
+from finance_tracker.metrics import (
+    compute_dashboard_metrics_from_db,
+    compute_kpi_cards,
+    resolve_budget_target_ratio,
+)
+from finance_tracker.services.income_expectations import sum_expected_net_monthly
 from finance_tracker.salary import compute_salary_dates
 from finance_tracker.schemas.dashboard import DashboardResponse, KpiItem, ToPayRow
 
@@ -97,9 +103,15 @@ def build_dashboard_response(
     ref_day = min(today.day, calendar.monthrange(year, month)[1])
     reference_date = datetime(year, month, ref_day)
 
-    salary_prev_month, due_salary_date = compute_salary_dates(reference_date, holidays_all)
+    salary_rule = get_or_create_salary_rule(user_id)
+    salary_dom = int(salary_rule.salary_day_of_month)
+    salary_prev_month, due_salary_date = compute_salary_dates(
+        reference_date,
+        holidays_all,
+        salary_day_of_month=salary_dom,
+    )
     cfg = get_config()
-    target_ratio = cfg.target_ratio
+    target_ratio = float(salary_rule.target_ratio) if salary_rule.target_ratio is not None else cfg.target_ratio
 
     selected_subcat_names: Set[str] = set(expenses_filtered["SubCategory"].tolist())
     expense_amounts_by_subcategory: dict[str, float] = {}
@@ -143,6 +155,7 @@ def build_dashboard_response(
                     expense_amounts_by_subcategory.get(subcat_str, 0.0) + abs_amt
                 )
 
+    budget_strategy = str(salary_rule.budget_strategy)
     metrics, to_pay = compute_dashboard_metrics_from_db(
         expenses_df_filtered=expenses_filtered,
         salary_prev_month=salary_prev_month,
@@ -153,7 +166,21 @@ def build_dashboard_response(
         groceries_total=groceries_total,
         expense_amounts_by_subcategory=expense_amounts_by_subcategory,
         target_ratio=target_ratio,
+        budget_strategy=budget_strategy,
     )
+
+    expected_income_net: Optional[float] = None
+    income_variance_vs_expected_percent: Optional[float] = None
+    try:
+        exp_sum = sum_expected_net_monthly(user_id)
+        if exp_sum > 0:
+            expected_income_net = round(exp_sum, 2)
+            income_variance_vs_expected_percent = round(
+                ((income_total - exp_sum) / exp_sum) * 100.0,
+                1,
+            )
+    except Exception:
+        pass
 
     cash_left = metrics.net_of_net
 
@@ -239,6 +266,7 @@ def build_dashboard_response(
             import_quality_value = "0%"
             import_quality_sub = f"{int(latest_import.parse_warnings_count or 0)} warnings"
 
+    eff_tr = resolve_budget_target_ratio(budget_strategy, target_ratio)
     kpi_cards = compute_kpi_cards(
         cash_left=cash_left,
         income_total=income_total,
@@ -255,6 +283,8 @@ def build_dashboard_response(
         import_quality_sub=import_quality_sub,
         top_category_name=top_category_name,
         top_category_amount=top_category_amount,
+        effective_target_ratio=eff_tr,
+        budget_strategy=budget_strategy,
     )
 
     kpis = [KpiItem(title=c.title, value=c.value, subtitle=c.subtitle) for c in kpi_cards]
@@ -270,7 +300,13 @@ def build_dashboard_response(
     fig = make_sankey_income_expense(incomes_df=incomes_df, expenses_df_filtered=expenses_sankey_df)
     sankey_plotly = json.loads(fig.to_json())
 
-    calendar_html = generate_calendar_html(year=year, month=month, holidays=holidays_all, today=today)
+    calendar_html = generate_calendar_html(
+        year=year,
+        month=month,
+        holidays=holidays_all,
+        today=today,
+        salary_date=salary_dom,
+    )
 
     to_pay_empty_reason: Optional[str] = None
     to_pay_rows: List[ToPayRow] = []
@@ -325,4 +361,6 @@ def build_dashboard_response(
         to_pay_empty_reason=to_pay_empty_reason,
         import_quality_value=import_quality_value,
         import_quality_sub=import_quality_sub,
+        expected_income_net=expected_income_net,
+        income_variance_vs_expected_percent=income_variance_vs_expected_percent,
     )

@@ -9,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
-from finance_tracker.api.routers import auth, dashboard, imports
+from finance_tracker.api.routers import analytics, auth, dashboard, imports, incomes, recurring, settings
+from finance_tracker.api.routers import tax_api
 from finance_tracker.config import (
     get_cors_origin_list,
     get_session_same_site,
@@ -65,6 +66,11 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(dashboard.router)
     app.include_router(imports.router)
+    app.include_router(settings.router)
+    app.include_router(incomes.router)
+    app.include_router(recurring.router)
+    app.include_router(tax_api.router)
+    app.include_router(analytics.router)
 
     @app.get("/")
     def root() -> dict[str, str]:

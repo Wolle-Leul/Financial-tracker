@@ -26,6 +26,21 @@ class KpiCard:
     subtitle: str
 
 
+def resolve_budget_target_ratio(strategy: str, stored: float) -> float:
+    """
+    Map a named budgeting strategy to an effective target ratio used in metrics.
+    `stored` is the user's configured target_ratio (e.g. 0.45).
+    """
+    s = (strategy or "custom_target_ratio").lower().replace("-", "_")
+    if s == "classic_50_30_20":
+        return 0.50
+    if s == "zero_based":
+        return max(min(float(stored), 0.99), 0.05)
+    if s == "salary_window_only":
+        return float(stored)
+    return float(stored)
+
+
 def _compute_groceries_allocation(
     expenses_df: pd.DataFrame,
     days_till_next_salary: int,
@@ -122,6 +137,7 @@ def compute_dashboard_metrics_from_db(
     groceries_total: float,
     expense_amounts_by_subcategory: dict[str, float],
     target_ratio: float = 0.45,
+    budget_strategy: str = "custom_target_ratio",
 ) -> Tuple[DashboardMetrics, pd.DataFrame]:
     """
     Compute dashboard metrics using imported transactions.
@@ -130,6 +146,8 @@ def compute_dashboard_metrics_from_db(
     - `groceries_total` is the groceries subset of expenses
     - `expense_amounts_by_subcategory` drives the "To Pay" table
     """
+    eff_ratio = resolve_budget_target_ratio(budget_strategy, target_ratio)
+
     days_till_next_salary = (due_salary_date - reference_date).days
     days_from_prev_salary = (reference_date - salary_prev_month).days
 
@@ -140,7 +158,7 @@ def compute_dashboard_metrics_from_db(
     else:
         needs_percent = (expense_total / income_total) * 100
 
-    target_net_of_net = net_of_net / target_ratio if target_ratio else 0.0
+    target_net_of_net = net_of_net / eff_ratio if eff_ratio else 0.0
     if target_net_of_net == 0:
         target_vs_actual_percent = 0.0
     else:
@@ -233,7 +251,11 @@ def compute_kpi_cards(
             "Expenses pace",
         ),
         KpiCard("Groceries share of spending", f"{groceries_share:.1f}%", "Groceries / total expenses"),
-        KpiCard("Target progress (ΔTarget%)", f"{target_vs_actual_percent:.1f}%", "Vs 45% target ratio"),
+        KpiCard(
+            "Target progress (ΔTarget%)",
+            f"{target_vs_actual_percent:.1f}%",
+            f"Vs {effective_target_ratio * 100:.0f}% ratio ({budget_strategy})",
+        ),
         KpiCard("Budget variance (selected)", _signed_pln(budget_variance), "Actual - planned"),
         KpiCard("Budget remaining (selected)", _signed_pln(budget_remaining), "Planned - actual"),
         KpiCard("Upcoming bills (30d)", f"{upcoming_bills_count}", "Based on planned deadlines"),
