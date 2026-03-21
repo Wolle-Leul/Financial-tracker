@@ -18,7 +18,7 @@ python -m venv .venv
 pip install -r requirements.txt
 set PYTHONPATH=.
 set PASSWORD=yourdevpassword
-uvicorn run_api:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn run_api:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### 2. Web app

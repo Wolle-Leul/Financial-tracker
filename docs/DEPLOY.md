@@ -30,6 +30,19 @@ If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `htt
 
 If you still see “session cookie” errors: check the browser is not blocking **third‑party cookies** for the API (try another browser or turn off strict blocking for a test).
 
+## Render (API) — start command and build
+
+**Symptom:** `bash: uvicorn: command not found` (exit 127). The venv has no `uvicorn` on `PATH`, or dependencies were never installed.
+
+1. **Build command** (if you use one): `pip install -r requirements.txt` (from repo root).
+2. **Start command** — use the module form so it always finds Uvicorn after `pip install`:
+   ```bash
+   PYTHONPATH=. python -m uvicorn run_api:app --host 0.0.0.0 --port $PORT
+   ```
+   Do **not** rely on bare `uvicorn ...` unless your platform puts the venv `bin` on `PATH`.
+
+After a successful deploy, logs should show Uvicorn listening (no exit 127). `POST /auth/login` must return JSON including a **`token`** field for the Hostinger SPA; if it does not, the running service is an old build or the wrong start command.
+
 ## Hostinger (frontend)
 
 1. Build: `cd web && npm ci && npm run build`.
@@ -44,7 +57,7 @@ export DB_URL="postgresql+psycopg://..."
 export PASSWORD_HASH='...'
 export SESSION_SECRET='...'
 export CORS_ORIGINS='https://your-spa-hostinger-domain.com'
-uvicorn run_api:app --host 0.0.0.0 --port 8000
+python -m uvicorn run_api:app --host 0.0.0.0 --port 8000
 ```
 
 Use HTTPS in front of Uvicorn (reverse proxy or platform TLS). Session cookies should be sent only over HTTPS in production; you may set `https_only=True` on `SessionMiddleware` in code when ready.
@@ -56,7 +69,7 @@ Use HTTPS in front of Uvicorn (reverse proxy or platform TLS). Session cookies s
 ```bash
 set PYTHONPATH=.
 set PASSWORD=devpassword
-uvicorn run_api:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn run_api:app --reload --host 127.0.0.1 --port 8000
 ```
 
 **Terminal 2 — SPA (uses Vite proxy to the API)**
