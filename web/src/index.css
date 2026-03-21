@@ -570,3 +570,131 @@ kbd {
   gap: 0.85rem;
   margin-top: 1.35rem;
 }
+
+/* —— Settings —— */
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.settings-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.settings-list-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-list-item .input {
+  max-width: 220px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table-input {
+  max-width: 120px;
+}
+
+.trend-chart {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  padding: 1rem 0;
+}
+
+.trend-month {
+  flex: 0 0 auto;
+  min-width: 52px;
+  text-align: center;
+}
+
+.trend-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.trend-bars {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: flex-end;
+  height: 120px;
+}
+
+.trend-bar {
+  width: 14px;
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+}
+
+.trend-bar.income {
+  background: linear-gradient(180deg, var(--good), rgba(94, 207, 140, 0.35));
+}
+
+.trend-bar.expense {
+  background: linear-gradient(180deg, var(--danger), rgba(251, 113, 133, 0.35));
+}
+
+.trend-net {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--muted2);
+  margin-top: 0.25rem;
+}
+
+.expected-income-banner {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.expected-income-banner strong {
+  color: var(--text);
+}

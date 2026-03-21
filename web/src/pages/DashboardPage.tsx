@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   authMe,
   fetchDashboard,
@@ -161,10 +161,31 @@ export default function DashboardPage() {
           <h1>Finance Tracker</h1>
           <span className="status-pill">{d.days_left_for_infy_label}</span>
         </div>
-        <button type="button" className="btn ghost btn-logout" onClick={() => void onLogout()}>
-          Log out
-        </button>
+        <div className="header-actions">
+          <Link to="/settings" className="btn ghost">
+            Settings
+          </Link>
+          <button type="button" className="btn ghost btn-logout" onClick={() => void onLogout()}>
+            Log out
+          </button>
+        </div>
       </header>
+
+      {d.expected_income_net != null && d.expected_income_net > 0 && (
+        <div className="expected-income-banner">
+          Expected income (configured): <strong>{d.expected_income_net.toLocaleString()} PLN</strong>
+          {d.income_variance_vs_expected_percent != null && (
+            <>
+              {' '}
+              · vs actual in window:{' '}
+              <strong>
+                {d.income_variance_vs_expected_percent > 0 ? '+' : ''}
+                {d.income_variance_vs_expected_percent}%
+              </strong>
+            </>
+          )}
+        </div>
+      )}
 
       <section className="panel filters-panel">
         <div className="panel-header">
