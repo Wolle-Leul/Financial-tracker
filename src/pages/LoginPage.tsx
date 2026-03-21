@@ -16,11 +16,16 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      await login(password)
+      const { tokenReceived } = await login(password)
       const sessionOk = await authMe()
       if (!sessionOk) {
+        if (!tokenReceived) {
+          throw new Error(
+            'The API did not return a login token. On Render: set Start Command to PYTHONPATH=. python -m uvicorn run_api:app --host 0.0.0.0 --port $PORT and Build to pip install -r requirements.txt, then redeploy. Test POST /auth/login in /docs — body should include "token".',
+          )
+        }
         throw new Error(
-          'Still not authenticated after login. Deploy the latest API (Bearer token auth) and rebuild the SPA. Also confirm CORS_ORIGINS and SESSION_SECRET on Render.',
+          'Login token was ignored by the server. On Render set SESSION_SECRET to a long random string (and keep it stable), redeploy API, clear site data, try again.',
         )
       }
       qc.removeQueries({ queryKey: ['dashboard'] })
