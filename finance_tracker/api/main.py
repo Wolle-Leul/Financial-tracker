@@ -38,6 +38,19 @@ def create_app() -> FastAPI:
     app.include_router(dashboard.router)
     app.include_router(imports.router)
 
+    @app.get("/")
+    def root() -> dict[str, str]:
+        """
+        Browsers and uptime checks often GET /. This API has no HTML UI here;
+        use the SPA (e.g. Hostinger) for the dashboard. Interactive API: /docs
+        """
+        return {
+            "service": "Finance Tracker API",
+            "docs": "/docs",
+            "health": "/health",
+            "auth_login": "POST /auth/login",
+        }
+
     @app.get("/health")
     def health() -> dict[str, str]:
         try:
