@@ -11,7 +11,9 @@ from finance_tracker.db.models import Base
 config = context.config
 
 # Ensure Alembic uses our configured DB URL.
-config.set_main_option("sqlalchemy.url", get_config().db_url)
+# ConfigParser treats % as interpolation; escape for URL-encoded password segments (%2F, etc.).
+_db_url = get_config().db_url or ""
+config.set_main_option("sqlalchemy.url", _db_url.replace("%", "%%"))
 
 target_metadata = Base.metadata
 
