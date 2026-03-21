@@ -86,6 +86,8 @@ export type DashboardResponse = {
   to_pay_empty_reason?: string | null
   import_quality_value: string
   import_quality_sub: string
+  expected_income_net?: number | null
+  income_variance_vs_expected_percent?: number | null
 }
 
 function buildQuery(params: Record<string, string | number | string[] | undefined>) {
@@ -165,4 +167,126 @@ export async function mapTransaction(transactionId: number, subcategoryId: numbe
     const err = await r.json().catch(() => ({}))
     throw new Error((err as { detail?: string }).detail || r.statusText)
   }
+}
+
+export type SalaryRuleSettings = {
+  salary_day_of_month: number
+  holiday_country: string
+  target_ratio: number
+  budget_strategy: string
+}
+
+export async function fetchSalaryRuleSettings(): Promise<SalaryRuleSettings> {
+  const r = await apiFetch('/api/settings/salary-rule')
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) throw new Error(await r.text())
+  return r.json() as Promise<SalaryRuleSettings>
+}
+
+export async function patchSalaryRuleSettings(body: Partial<SalaryRuleSettings>): Promise<SalaryRuleSettings> {
+  const r = await apiFetch('/api/settings/salary-rule', { method: 'PATCH', body: JSON.stringify(body) })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<SalaryRuleSettings>
+}
+
+export type IncomeSource = {
+  id: number
+  label: string
+  employer_name?: string | null
+  contract_type: string
+  gross_amount?: number | null
+  net_amount?: number | null
+  use_net_only: boolean
+  sort_order: number
+}
+
+export async function fetchIncomeSources(): Promise<IncomeSource[]> {
+  const r = await apiFetch('/api/income-sources')
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) throw new Error(await r.text())
+  return r.json() as Promise<IncomeSource[]>
+}
+
+export async function createIncomeSource(body: Omit<IncomeSource, 'id'>): Promise<IncomeSource> {
+  const r = await apiFetch('/api/income-sources', { method: 'POST', body: JSON.stringify(body) })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<IncomeSource>
+}
+
+export async function patchIncomeSource(id: number, body: Partial<IncomeSource>): Promise<IncomeSource> {
+  const r = await apiFetch(`/api/income-sources/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<IncomeSource>
+}
+
+export async function deleteIncomeSource(id: number): Promise<void> {
+  const r = await apiFetch(`/api/income-sources/${id}`, { method: 'DELETE' })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) throw new Error(await r.text())
+}
+
+export type RecurringExpenseRow = {
+  id: number
+  category_name: string
+  name: string
+  planned_amount?: number | null
+  planned_deadline_day?: number | null
+}
+
+export async function fetchRecurringExpenses(): Promise<RecurringExpenseRow[]> {
+  const r = await apiFetch('/api/recurring-expenses')
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) throw new Error(await r.text())
+  return r.json() as Promise<RecurringExpenseRow[]>
+}
+
+export async function patchRecurringExpense(
+  id: number,
+  body: { planned_amount?: number | null; planned_deadline_day?: number | null },
+): Promise<RecurringExpenseRow> {
+  const r = await apiFetch(`/api/recurring-expenses/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<RecurringExpenseRow>
+}
+
+export type CalculateNetResponse = { net: number; notes: string }
+
+export async function calculateNet(gross: number, contractType: string): Promise<CalculateNetResponse> {
+  const r = await apiFetch('/api/calculate-net', {
+    method: 'POST',
+    body: JSON.stringify({ gross, contract_type: contractType }),
+  })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<CalculateNetResponse>
+}
+
+export type TrendPoint = { month: string; income: number; expenses: number; net: number }
+
+export type TrendsResponse = { months: TrendPoint[] }
+
+export async function fetchTrends(months = 12): Promise<TrendsResponse> {
+  const r = await apiFetch(`/api/analytics/trends?months=${months}`)
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) throw new Error(await r.text())
+  return r.json() as Promise<TrendsResponse>
 }
