@@ -10,6 +10,7 @@ from finance_tracker.db.models import Category, Import as ImportModel
 from finance_tracker.db.models import SubCategory, Transaction
 from finance_tracker.db.session import init_db_for_dev, session_scope
 from finance_tracker.parsers.generic_pdf_parser import parse_pdf_transactions
+from finance_tracker.parsers.polish_card_statement import parse_polish_card_pdf_transactions
 from finance_tracker.db.seed import ensure_demo_categories_seeded
 from finance_tracker.db.user import get_or_create_default_user_id
 
@@ -56,10 +57,30 @@ def import_statement_pdf(pdf_bytes: bytes, filename: str) -> Dict[str, Any]:
     # Ensure category/subcategory records exist (and have keywords for mapping).
     ensure_demo_categories_seeded(user_id)
 
-    transactions_parsed, parse_warnings = parse_pdf_transactions(pdf_bytes, return_errors=True)
+    generic_txns, generic_warnings = parse_pdf_transactions(pdf_bytes, return_errors=True)
+    polish_warnings: List[Any] = []
+    if generic_txns:
+        transactions_parsed, parse_warnings = generic_txns, generic_warnings
+    else:
+        polish_txns, polish_warnings = parse_polish_card_pdf_transactions(
+            pdf_bytes, return_errors=True
+        )
+        if polish_txns:
+            transactions_parsed, parse_warnings = polish_txns, polish_warnings
+        else:
+            transactions_parsed, parse_warnings = [], generic_warnings
+
     if not transactions_parsed:
-        # Surface parser hints to the user.
-        hint = parse_warnings[0].reason if parse_warnings else "Unknown parsing failure"
+        hint_parts: List[str] = []
+        if generic_warnings:
+            hint_parts.append(f"generic: {generic_warnings[0].reason}")
+        if polish_warnings:
+            hint_parts.append(f"polish: {polish_warnings[0].reason}")
+        hint = (
+            "; ".join(hint_parts)
+            if hint_parts
+            else "Unknown parsing failure (generic and Polish card template found nothing)"
+        )
         raise ValueError(f"No transactions parsed from PDF. Parser hint: {hint}")
 
     with session_scope() as session:
