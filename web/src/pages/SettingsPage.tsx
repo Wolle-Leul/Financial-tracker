@@ -5,7 +5,10 @@ import {
   authMe,
   calculateNet,
   createIncomeSource,
+  createSubcategory,
   deleteIncomeSource,
+  deleteSubcategory,
+  fetchBudgetLabels,
   fetchIncomeSources,
   fetchRecurringExpenses,
   fetchSalaryRuleSettings,
@@ -73,6 +76,41 @@ export default function SettingsPage() {
     queryKey: ['settings', 'trends'],
     queryFn: () => fetchTrends(12),
     enabled: authReady,
+  })
+
+  const labelsQ = useQuery({
+    queryKey: ['budget-labels'],
+    queryFn: fetchBudgetLabels,
+    enabled: authReady,
+  })
+
+  const [newLineCat, setNewLineCat] = useState<number | ''>('')
+  const [newLineName, setNewLineName] = useState('')
+  const [newLineKw, setNewLineKw] = useState('')
+
+  const addLine = useMutation({
+    mutationFn: () =>
+      createSubcategory({
+        category_id: Number(newLineCat),
+        name: newLineName.trim(),
+        match_keywords: newLineKw.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setNewLineName('')
+      setNewLineKw('')
+      void qc.invalidateQueries({ queryKey: ['budget-labels'] })
+      void qc.invalidateQueries({ queryKey: ['recurring-expenses'] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
+  const removeLine = useMutation({
+    mutationFn: (id: number) => deleteSubcategory(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['budget-labels'] })
+      void qc.invalidateQueries({ queryKey: ['recurring-expenses'] })
+      void qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 
   const [salaryDay, setSalaryDay] = useState(10)
@@ -202,10 +240,31 @@ export default function SettingsPage() {
             </select>
           </label>
         </div>
-        <button type="button" className="btn primary" disabled={saveSettings.isPending} onClick={() => saveSettings.mutate()}>
-          {saveSettings.isPending ? 'Saving…' : 'Save pay & budget settings'}
-        </button>
+        <div className="settings-actions-row">
+          <button type="button" className="btn primary" disabled={saveSettings.isPending} onClick={() => saveSettings.mutate()}>
+            {saveSettings.isPending ? 'Saving…' : 'Save pay & budget settings'}
+          </button>
+          <button
+            type="button"
+            className="btn primary settings-cta-dash"
+            disabled={saveSettings.isPending}
+            onClick={() =>
+              saveSettings.mutate(undefined, {
+                onSuccess: () => {
+                  void qc.invalidateQueries({ queryKey: ['dashboard'] })
+                  nav('/')
+                },
+              })
+            }
+          >
+            Save &amp; open dashboard
+          </button>
+        </div>
         {saveSettings.isError && <p className="error">{(saveSettings.error as Error).message}</p>}
+        <p className="hint settings-hint">
+          Pay day and strategy apply to the calendar, salary window, and KPIs as soon as you save. Use &quot;Save &amp; open
+          dashboard&quot; to return and see them immediately.
+        </p>
       </section>
 
       <section className="panel">
@@ -299,6 +358,100 @@ export default function SettingsPage() {
             <IncomeRow key={row.id} row={row} onChanged={() => void qc.invalidateQueries({ queryKey: ['dashboard'] })} />
           ))}
         </ul>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <h2>Budget lines (subcategories)</h2>
+          <p className="panel-desc">
+            Add or remove named lines (e.g. Netflix, rent). They appear in filters, recurring bills, and PDF keyword mapping.
+          </p>
+        </div>
+        {labelsQ.isLoading && <p className="muted">Loading…</p>}
+        {labelsQ.data && labelsQ.data.categories.length === 0 && (
+          <p className="muted">No categories yet — seed data should create defaults on first run.</p>
+        )}
+        {labelsQ.data && labelsQ.data.categories.length > 0 && (
+          <>
+            <div className="settings-grid budget-line-form">
+              <label className="label">
+                Category
+                <select
+                  className="input"
+                  value={newLineCat === '' ? '' : newLineCat}
+                  onChange={(e) => setNewLineCat(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                >
+                  <option value="">Select…</option>
+                  {labelsQ.data.categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="label">
+                Line name
+                <input
+                  className="input"
+                  placeholder="e.g. Netflix"
+                  value={newLineName}
+                  onChange={(e) => setNewLineName(e.target.value)}
+                />
+              </label>
+              <label className="label">
+                Keywords (optional)
+                <input
+                  className="input"
+                  placeholder="netflix,streaming"
+                  value={newLineKw}
+                  onChange={(e) => setNewLineKw(e.target.value)}
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={addLine.isPending || newLineCat === '' || !newLineName.trim()}
+              onClick={() => addLine.mutate()}
+            >
+              Add budget line
+            </button>
+            {addLine.isError && <p className="error">{(addLine.error as Error).message}</p>}
+            <div className="table-wrap budget-lines-table">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Line</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {labelsQ.data.categories.flatMap((c) =>
+                    c.subcategories.map((s) => (
+                      <tr key={s.id}>
+                        <td>{c.name}</td>
+                        <td>{s.name}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn ghost"
+                            disabled={removeLine.isPending}
+                            onClick={() => {
+                              if (window.confirm(`Remove budget line "${s.name}"?`)) removeLine.mutate(s.id)
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="panel">

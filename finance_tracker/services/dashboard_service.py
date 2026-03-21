@@ -285,9 +285,12 @@ def build_dashboard_response(
         top_category_amount=top_category_amount,
         effective_target_ratio=eff_tr,
         budget_strategy=budget_strategy,
+        expected_income_net=expected_income_net,
     )
 
-    kpis = [KpiItem(title=c.title, value=c.value, subtitle=c.subtitle) for c in kpi_cards]
+    kpis = [
+        KpiItem(title=c.title, value=c.value, subtitle=c.subtitle, kind=c.kind) for c in kpi_cards
+    ]
 
     incomes_df = pd.DataFrame({"Source": ["Income"], "Amount": [income_total]})
     expenses_sankey_df = pd.DataFrame(

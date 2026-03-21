@@ -6,6 +6,28 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
+class SubcategoryCreatedOut(BaseModel):
+    id: int
+    category_id: int
+    name: str
+
+
+class BudgetCategoryOut(BaseModel):
+    id: int
+    name: str
+    subcategories: List[SubcategoryCreatedOut] = Field(default_factory=list)
+
+
+class BudgetLabelsResponse(BaseModel):
+    categories: List[BudgetCategoryOut] = Field(default_factory=list)
+
+
+class SubcategoryCreateBody(BaseModel):
+    category_id: int = Field(..., gt=0)
+    name: str = Field(..., min_length=1, max_length=120)
+    match_keywords: Optional[str] = Field(None, max_length=2000)
+
+
 class SalaryRuleResponse(BaseModel):
     salary_day_of_month: int = Field(..., ge=1, le=31)
     holiday_country: str
