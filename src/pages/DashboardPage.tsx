@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   authMe,
@@ -10,6 +10,8 @@ import {
   mapTransaction,
   type DashboardResponse,
 } from '../api/client'
+import ChartErrorBoundary from '../components/ChartErrorBoundary'
+
 const SankeyPlot = lazy(() => import('../components/SankeyPlot'))
 
 const MONTHS = [
@@ -39,12 +41,16 @@ export default function DashboardPage() {
   const [subcategories, setSubcategories] = useState<string[]>([])
   const [lastImportId, setLastImportId] = useState<number | null>(() => {
     const raw = sessionStorage.getItem(LAST_IMPORT_KEY)
-    return raw ? parseInt(raw, 10) : null
+    if (!raw) return null
+    const n = parseInt(raw, 10)
+    return Number.isFinite(n) ? n : null
   })
   const [mapTxnId, setMapTxnId] = useState<number | null>(null)
   const [mapSubcatId, setMapSubcatId] = useState<number | null>(null)
   /** Must be true before any API call that needs the session cookie (avoids racing /auth/me). */
   const [authReady, setAuthReady] = useState(false)
+
+  const redirectLoginRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -71,7 +77,18 @@ export default function DashboardPage() {
         subcategories: subcategories.length ? subcategories : undefined,
       }),
     enabled: authReady,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
   })
+
+  /** Never call navigate() during render — it caused blank screens when API returned 401 mid-session. */
+  useEffect(() => {
+    const err = dashboardQuery.error
+    if (!err || !(err instanceof Error) || err.message !== 'UNAUTHORIZED') return
+    if (redirectLoginRef.current) return
+    redirectLoginRef.current = true
+    nav('/login', { replace: true })
+  }, [dashboardQuery.error, nav])
 
   const uncategorizedQuery = useQuery({
     queryKey: ['uncategorized', lastImportId],
@@ -120,8 +137,11 @@ export default function DashboardPage() {
     const msg =
       dashboardQuery.error instanceof Error ? dashboardQuery.error.message : 'Error'
     if (msg === 'UNAUTHORIZED') {
-      nav('/login', { replace: true })
-      return null
+      return (
+        <div className="page-pad">
+          <p className="muted">Session expired — returning to sign in…</p>
+        </div>
+      )
     }
     return (
       <div className="page-pad">
@@ -270,7 +290,9 @@ export default function DashboardPage() {
         <section className="panel">
           <h3>Income → expenses</h3>
           <Suspense fallback={<p className="muted">Loading chart…</p>}>
-            <SankeyPlot figure={d.sankey_plotly} />
+            <ChartErrorBoundary>
+              <SankeyPlot figure={d.sankey_plotly} />
+            </ChartErrorBoundary>
           </Suspense>
         </section>
       </div>
