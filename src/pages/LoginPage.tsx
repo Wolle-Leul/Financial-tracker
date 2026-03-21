@@ -20,7 +20,7 @@ export default function LoginPage() {
       const sessionOk = await authMe()
       if (!sessionOk) {
         throw new Error(
-          'Password accepted but the session cookie is not working. In Render → your Web Service → Environment add: SESSION_SAME_SITE = none (exactly). CORS_ORIGINS = this page’s origin (copy from the address bar: https://… only, no path). Save, then Manual Deploy. Block third‑party cookies in the browser can also break this.',
+          'Still not authenticated after login. Deploy the latest API (Bearer token auth) and rebuild the SPA. Also confirm CORS_ORIGINS and SESSION_SECRET on Render.',
         )
       }
       qc.removeQueries({ queryKey: ['dashboard'] })

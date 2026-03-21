@@ -1,10 +1,21 @@
 const base = () => (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
+/** Signed token from POST /auth/login when the browser blocks cross-site cookies. */
+const AUTH_TOKEN_KEY = 'ft_auth_token'
+
+export function clearAuthToken(): void {
+  sessionStorage.removeItem(AUTH_TOKEN_KEY)
+}
+
 async function apiFetch(path: string, init: RequestInit = {}) {
   const url = `${base()}${path.startsWith('/') ? path : `/${path}`}`
   const headers = new Headers(init.headers)
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
+  }
+  const token = sessionStorage.getItem(AUTH_TOKEN_KEY)
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
   }
   return fetch(url, {
     ...init,
@@ -14,6 +25,7 @@ async function apiFetch(path: string, init: RequestInit = {}) {
 }
 
 export async function login(password: string): Promise<void> {
+  clearAuthToken()
   const r = await apiFetch('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ password }),
@@ -22,9 +34,14 @@ export async function login(password: string): Promise<void> {
     const err = await r.json().catch(() => ({}))
     throw new Error((err as { detail?: string }).detail || r.statusText)
   }
+  const j = (await r.json()) as { token?: string }
+  if (j.token) {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, j.token)
+  }
 }
 
 export async function logout(): Promise<void> {
+  clearAuthToken()
   await apiFetch('/auth/logout', { method: 'POST' })
 }
 
