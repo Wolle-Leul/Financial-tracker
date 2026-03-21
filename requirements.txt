@@ -9,4 +9,5 @@ SQLAlchemy
 alembic
 psycopg[binary]
 bcrypt
+itsdangerous>=2.0
 pytest
