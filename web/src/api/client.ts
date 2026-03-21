@@ -24,7 +24,10 @@ async function apiFetch(path: string, init: RequestInit = {}) {
   })
 }
 
-export async function login(password: string): Promise<void> {
+/** Set when POST /auth/login JSON includes `token` (Bearer auth for cross-origin SPA). */
+export type LoginResult = { tokenReceived: boolean }
+
+export async function login(password: string): Promise<LoginResult> {
   clearAuthToken()
   const r = await apiFetch('/auth/login', {
     method: 'POST',
@@ -37,7 +40,9 @@ export async function login(password: string): Promise<void> {
   const j = (await r.json()) as { token?: string }
   if (j.token) {
     sessionStorage.setItem(AUTH_TOKEN_KEY, j.token)
+    return { tokenReceived: true }
   }
+  return { tokenReceived: false }
 }
 
 export async function logout(): Promise<void> {

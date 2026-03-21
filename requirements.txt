@@ -10,4 +10,8 @@ alembic
 psycopg[binary]
 bcrypt
 itsdangerous>=2.0
+# API (Render / production) — was missing; caused `uvicorn: command not found` on Render
+fastapi>=0.109
+uvicorn[standard]>=0.27
+pydantic>=2
 pytest
