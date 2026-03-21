@@ -9,9 +9,5 @@ SQLAlchemy
 alembic
 psycopg[binary]
 bcrypt
-pytest
-fastapi
-uvicorn[standard]
-python-multipart
-pydantic
 itsdangerous>=2.0
+pytest

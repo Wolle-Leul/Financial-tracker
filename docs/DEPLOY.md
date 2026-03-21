@@ -26,6 +26,8 @@ If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `htt
 4. **Save**, then **Manual Deploy** (or push to the connected branch) so the service restarts.
 5. After deploy, open **Logs** and confirm a line like `session cookie: same_site=none https_only=True` on startup.
 
+**If `CORS_ORIGINS` and `SESSION_SAME_SITE=none` are already correct but login still loops:** modern browsers often block **cross-site cookies** even when CORS is right. The API and SPA also support a **signed Bearer token**: `POST /auth/login` returns `{"ok":true,"token":"..."}` and the SPA stores it in `sessionStorage` and sends `Authorization: Bearer …` on later requests. Deploy the latest API + rebuild/upload the SPA so this path is active — you do not need to change Render env for the token.
+
 If you still see “session cookie” errors: check the browser is not blocking **third‑party cookies** for the API (try another browser or turn off strict blocking for a test).
 
 ## Hostinger (frontend)
