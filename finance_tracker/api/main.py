@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 
@@ -9,8 +10,14 @@ from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
 from finance_tracker.api.routers import auth, dashboard, imports
-from finance_tracker.config import get_cors_origin_list, get_session_secret_value
+from finance_tracker.config import (
+    get_cors_origin_list,
+    get_session_same_site,
+    get_session_secret_value,
+)
 from finance_tracker.db.session import get_engine
+
+_uvicorn_log = logging.getLogger("uvicorn.error")
 
 
 def _session_middleware_kwargs() -> dict:
@@ -21,9 +28,7 @@ def _session_middleware_kwargs() -> dict:
     Set on Render: SESSION_SAME_SITE=none (and use HTTPS on the API).
     Local dev: leave unset (defaults to lax).
     """
-    same_site = os.getenv("SESSION_SAME_SITE", "lax").lower()
-    if same_site not in ("lax", "strict", "none"):
-        same_site = "lax"
+    same_site = get_session_same_site()
     https_only = same_site == "none" or os.getenv("SESSION_HTTPS_ONLY", "").lower() == "true"
     return {"same_site": same_site, "https_only": https_only}
 
@@ -37,6 +42,13 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Finance Tracker API", lifespan=lifespan)
 
     session_kw = _session_middleware_kwargs()
+    _origins = get_cors_origin_list()
+    _uvicorn_log.info(
+        "session cookie: same_site=%s https_only=%s | CORS allow_origins count=%s (cross-site: SESSION_SAME_SITE=none + CORS_ORIGINS=https://your-spa-host)",
+        session_kw.get("same_site"),
+        session_kw.get("https_only"),
+        len(_origins),
+    )
     app.add_middleware(
         SessionMiddleware,
         secret_key=get_session_secret_value(),
@@ -44,7 +56,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=get_cors_origin_list(),
+        allow_origins=_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

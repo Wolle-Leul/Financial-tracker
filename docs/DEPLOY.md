@@ -18,7 +18,15 @@ The app is split into two deployable units:
 
 If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `http://127.0.0.1:5173` for local development.
 
-**Hostinger + Render:** After a correct password, if the app returns to the login screen or shows a session error, almost always **`SESSION_SAME_SITE` is not `none`** on Render and/or **`CORS_ORIGINS` does not exactly match** your Hostinger URL (scheme + host, no path, no trailing slash).
+**Hostinger + Render (required for login to stick):**
+
+1. [Render](https://dashboard.render.com) → your **Web Service** (the API) → **Environment**.
+2. Add **`SESSION_SAME_SITE`** = **`none`** (lowercase word `none`, no quotes).
+3. Add **`CORS_ORIGINS`** = your SPA origin only, e.g. `https://something.hostingersite.com` — copy from the browser address bar (HTTPS, no path; a trailing slash is OK in the env var; the API normalizes it).
+4. **Save**, then **Manual Deploy** (or push to the connected branch) so the service restarts.
+5. After deploy, open **Logs** and confirm a line like `session cookie: same_site=none https_only=True` on startup.
+
+If you still see “session cookie” errors: check the browser is not blocking **third‑party cookies** for the API (try another browser or turn off strict blocking for a test).
 
 ## Hostinger (frontend)
 

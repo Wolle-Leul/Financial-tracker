@@ -57,19 +57,35 @@ def get_config() -> AppConfig:
     )
 
 
+def _normalize_origin(origin: str) -> str:
+    o = origin.strip()
+    while o.endswith("/"):
+        o = o[:-1]
+    return o
+
+
 def get_cors_origin_list() -> list[str]:
     """
     Browser origins allowed to call the API with credentials (cookies).
     SPA on Hostinger + API on Render must list the exact HTTPS origin(s), e.g.
-    https://yoursite.hostingersite.com — no trailing slash.
+    https://yoursite.hostingersite.com — trailing slashes are stripped automatically.
     """
     raw = _get_secret("cors_origins") or ""
     if not raw:
         raw = os.getenv("CORS_ORIGINS") or ""
-    parts = [p.strip() for p in str(raw).split(",") if p.strip()]
+    parts = [_normalize_origin(p) for p in str(raw).split(",") if p.strip()]
     if not parts:
         return ["http://127.0.0.1:5173", "http://localhost:5173"]
     return parts
+
+
+def get_session_same_site() -> str:
+    """lax | strict | none. Use none for SPA on another domain than the API (e.g. Hostinger + Render)."""
+    raw = _get_secret("session_same_site") or os.getenv("SESSION_SAME_SITE") or "lax"
+    s = str(raw).strip().lower()
+    if s not in ("lax", "strict", "none"):
+        return "lax"
+    return s
 
 
 def get_session_secret_value() -> str:
