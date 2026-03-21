@@ -31,7 +31,9 @@ def migrate_upgrade() -> None:
         return
 
     cfg = Config(str(ini))
-    cfg.set_main_option("sqlalchemy.url", get_config().db_url)
+    # ConfigParser treats % as interpolation; passwords may contain %2F etc.
+    raw_url = get_config().db_url or ""
+    cfg.set_main_option("sqlalchemy.url", raw_url.replace("%", "%%"))
     _log.info("Running Alembic upgrade head…")
     command.upgrade(cfg, "head")
     _log.info("Alembic upgrade head completed")

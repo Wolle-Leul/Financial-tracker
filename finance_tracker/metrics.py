@@ -226,6 +226,8 @@ def compute_kpi_cards(
     import_quality_sub: str,
     top_category_name: str,
     top_category_amount: float,
+    effective_target_ratio: float = 0.45,
+    budget_strategy: str = "custom_target_ratio",
 ) -> List[KpiCard]:
     """
     Compute the KPI card payload used by the UI.
