@@ -43,11 +43,22 @@ export default function DashboardPage() {
   })
   const [mapTxnId, setMapTxnId] = useState<number | null>(null)
   const [mapSubcatId, setMapSubcatId] = useState<number | null>(null)
+  /** Must be true before any API call that needs the session cookie (avoids racing /auth/me). */
+  const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     void authMe().then((ok) => {
-      if (!ok) nav('/login', { replace: true })
+      if (cancelled) return
+      if (!ok) {
+        nav('/login', { replace: true })
+        return
+      }
+      setAuthReady(true)
     })
+    return () => {
+      cancelled = true
+    }
   }, [nav])
 
   const dashboardQuery = useQuery({
@@ -59,12 +70,13 @@ export default function DashboardPage() {
         categories: categories.length ? categories : undefined,
         subcategories: subcategories.length ? subcategories : undefined,
       }),
+    enabled: authReady,
   })
 
   const uncategorizedQuery = useQuery({
     queryKey: ['uncategorized', lastImportId],
     queryFn: () => fetchUncategorized(lastImportId!),
-    enabled: lastImportId != null,
+    enabled: authReady && lastImportId != null,
   })
 
   const importMutation = useMutation({
@@ -90,6 +102,14 @@ export default function DashboardPage() {
   async function onLogout() {
     await logout()
     nav('/login', { replace: true })
+  }
+
+  if (!authReady) {
+    return (
+      <div className="page-pad">
+        <p className="muted">Checking session…</p>
+      </div>
+    )
   }
 
   if (dashboardQuery.isLoading) {
