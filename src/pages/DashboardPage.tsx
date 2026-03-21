@@ -155,19 +155,23 @@ export default function DashboardPage() {
   const yearOptions = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
 
   return (
-    <div className="page-pad">
-      <header className="top-bar">
+    <div className="page-pad dashboard">
+      <header className="page-header">
         <div>
           <h1>Finance Tracker</h1>
-          <p className="muted">{d.days_left_for_infy_label}</p>
+          <span className="status-pill">{d.days_left_for_infy_label}</span>
         </div>
-        <button type="button" className="btn ghost" onClick={() => void onLogout()}>
+        <button type="button" className="btn ghost btn-logout" onClick={() => void onLogout()}>
           Log out
         </button>
       </header>
 
-      <section className="panel filters">
-        <div className="field-row">
+      <section className="panel filters-panel">
+        <div className="panel-header">
+          <h2>Filters</h2>
+          <p className="panel-desc">Choose the period and optionally narrow by category.</p>
+        </div>
+        <div className="filter-row-dates">
           <label className="label">
             Year
             <select
@@ -197,7 +201,7 @@ export default function DashboardPage() {
             </select>
           </label>
         </div>
-        <div className="field-row">
+        <div className="filter-row-lists">
           <label className="label grow">
             Categories (optional)
             <select
@@ -237,17 +241,26 @@ export default function DashboardPage() {
             </select>
           </label>
         </div>
-        <p className="hint">Hold Ctrl (Cmd on Mac) to select multiple categories or sub-categories.</p>
+        <p className="hint">
+          Tip: hold <kbd>Ctrl</kbd> (Windows) or <kbd>⌘</kbd> (Mac) while clicking to select several
+          categories or sub-categories.
+        </p>
       </section>
 
       <section className="panel">
-        <h2>Important metrics</h2>
+        <div className="panel-header">
+          <h2>Important metrics</h2>
+          <p className="panel-desc">Snapshot for the selected month — hover cards for emphasis.</p>
+        </div>
         <div className="kpi-grid">
-          {d.kpis.map((k) => (
-            <div key={k.title} className="kpi-card">
+          {d.kpis.map((k, i) => (
+            <div
+              key={k.title}
+              className={i === 0 ? 'kpi-card kpi-card--hero' : 'kpi-card'}
+            >
               <div className="kpi-title">{k.title}</div>
               <div className="kpi-value">{k.value}</div>
-              <div className="kpi-sub muted">{k.subtitle}</div>
+              <div className="kpi-sub">{k.subtitle}</div>
             </div>
           ))}
         </div>
@@ -255,10 +268,17 @@ export default function DashboardPage() {
 
       <div className="grid-3">
         <section className="panel">
-          <h3>Calendar</h3>
+          <div className="panel-header">
+            <h2>Calendar</h2>
+            <p className="panel-desc">Holidays, salary day, and today.</p>
+          </div>
           <div className="calendar-html" dangerouslySetInnerHTML={{ __html: d.calendar_html }} />
         </section>
         <section className="panel metrics-side">
+          <div className="panel-header">
+            <h2>Quick figures</h2>
+            <p className="panel-desc">Key amounts for this view.</p>
+          </div>
           <div className="metric-line">
             <span className="metric-label">Due salary</span>
             <span className="metric-val">{d.due_salary_date}</span>
@@ -287,8 +307,11 @@ export default function DashboardPage() {
             </span>
           </div>
         </section>
-        <section className="panel">
-          <h3>Income → expenses</h3>
+        <section className="panel chart-panel">
+          <div className="panel-header">
+            <h2>Income → expenses</h2>
+            <p className="panel-desc">Flow between income categories and spending.</p>
+          </div>
           <Suspense fallback={<p className="muted">Loading chart…</p>}>
             <ChartErrorBoundary>
               <SankeyPlot figure={d.sankey_plotly} />
@@ -298,9 +321,15 @@ export default function DashboardPage() {
       </div>
 
       <section className="panel">
-        <h2>To pay</h2>
+        <div className="panel-header">
+          <h2>To pay</h2>
+          <p className="panel-desc">Planned vs actual in the current salary window.</p>
+        </div>
         {d.to_pay_empty_reason ? (
-          <p className="muted">{d.to_pay_empty_reason}</p>
+          <div className="empty-state">
+            <strong>Nothing scheduled</strong>
+            {d.to_pay_empty_reason}
+          </div>
         ) : (
           <div className="table-wrap">
             <table className="data-table">
@@ -335,16 +364,27 @@ export default function DashboardPage() {
       </section>
 
       <section className="panel">
-        <h2>PDF import</h2>
-        <input
-          type="file"
-          accept="application/pdf,.pdf"
-          onChange={(e) => {
-            const f = e.target.files?.[0]
-            if (f) importMutation.mutate(f)
-            e.target.value = ''
-          }}
-        />
+        <div className="panel-header">
+          <h2>PDF import</h2>
+          <p className="panel-desc">Upload a bank statement PDF to add transactions.</p>
+        </div>
+        <div className="file-upload">
+          <input
+            id="pdf-import"
+            className="file-upload-input"
+            type="file"
+            accept="application/pdf,.pdf"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) importMutation.mutate(f)
+              e.target.value = ''
+            }}
+          />
+          <label htmlFor="pdf-import" className="btn primary file-upload-label">
+            Choose PDF file
+          </label>
+          <span className="file-hint">Only .pdf</span>
+        </div>
         {importMutation.isPending ? <p className="muted">Importing…</p> : null}
         {importMutation.error ? (
           <p className="error">
@@ -362,9 +402,15 @@ export default function DashboardPage() {
       </section>
 
       <section className="panel">
-        <h2>Manual category mapping (uncategorized)</h2>
+        <div className="panel-header">
+          <h2>Manual category mapping</h2>
+          <p className="panel-desc">Assign a subcategory to lines the parser could not classify.</p>
+        </div>
         {!lastImportId ? (
-          <p className="muted">Import a PDF to map uncategorized transactions.</p>
+          <div className="empty-state">
+            <strong>Import a PDF first</strong>
+            After a successful import, uncategorized transactions appear here for mapping.
+          </div>
         ) : uncategorizedQuery.isLoading ? (
           <p className="muted">Loading uncategorized…</p>
         ) : uncategorizedQuery.error ? (
