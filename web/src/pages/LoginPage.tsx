@@ -20,7 +20,7 @@ export default function LoginPage() {
       const sessionOk = await authMe()
       if (!sessionOk) {
         throw new Error(
-          'Password accepted but the session cookie was not saved. On Render set SESSION_SAME_SITE=none (HTTPS), and set CORS_ORIGINS to this site’s exact origin (https://…, no trailing slash).',
+          'Password accepted but the session cookie is not working. In Render → your Web Service → Environment add: SESSION_SAME_SITE = none (exactly). CORS_ORIGINS = this page’s origin (copy from the address bar: https://… only, no path). Save, then Manual Deploy. Block third‑party cookies in the browser can also break this.',
         )
       }
       qc.removeQueries({ queryKey: ['dashboard'] })
