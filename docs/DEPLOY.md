@@ -13,7 +13,8 @@ The app is split into two deployable units:
 | `PASSWORD_HASH` | Bcrypt hash for the dashboard password (recommended). |
 | `PASSWORD` | Plaintext password (dev only; prefer `PASSWORD_HASH`). |
 | `SESSION_SECRET` | Secret for signing session cookies (set a long random string in production). |
-| `CORS_ORIGINS` | Comma-separated list of allowed browser origins, e.g. `https://yourdomain.com,https://www.yourdomain.com`. |
+| `CORS_ORIGINS` | Comma-separated list of allowed browser origins, e.g. `https://yourdomain.com,https://www.yourdomain.com`. Must match the **exact** URL of your Hostinger site (no path, no trailing slash). |
+| `SESSION_SAME_SITE` | Set to **`none`** on Render when the SPA is on a **different domain** than the API (e.g. Hostinger + Render). Required so the browser sends session cookies on API requests. API must be served over **HTTPS**. Leave unset for local dev (`lax`). |
 
 If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `http://127.0.0.1:5173` for local development.
 
@@ -31,10 +32,11 @@ export DB_URL="postgresql+psycopg://..."
 export PASSWORD_HASH='...'
 export SESSION_SECRET='...'
 export CORS_ORIGINS='https://your-spa-hostinger-domain.com'
+export SESSION_SAME_SITE='none'
 uvicorn run_api:app --host 0.0.0.0 --port 8000
 ```
 
-Use HTTPS in front of Uvicorn (reverse proxy or platform TLS). Session cookies should be sent only over HTTPS in production; you may set `https_only=True` on `SessionMiddleware` in code when ready.
+Use HTTPS in front of Uvicorn (reverse proxy or platform TLS). With `SESSION_SAME_SITE=none`, the app sets secure session cookies suitable for cross-origin SPAs.
 
 ## Local development
 

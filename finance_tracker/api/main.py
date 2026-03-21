@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -12,6 +13,21 @@ from finance_tracker.config import get_cors_origin_list, get_session_secret_valu
 from finance_tracker.db.session import get_engine
 
 
+def _session_middleware_kwargs() -> dict:
+    """
+    Hostinger (or any) SPA on domain A + API on Render domain B is cross-site.
+    Browsers only send session cookies on those requests if SameSite=None and Secure.
+
+    Set on Render: SESSION_SAME_SITE=none (and use HTTPS on the API).
+    Local dev: leave unset (defaults to lax).
+    """
+    same_site = os.getenv("SESSION_SAME_SITE", "lax").lower()
+    if same_site not in ("lax", "strict", "none"):
+        same_site = "lax"
+    https_only = same_site == "none" or os.getenv("SESSION_HTTPS_ONLY", "").lower() == "true"
+    return {"same_site": same_site, "https_only": https_only}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -20,11 +36,11 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="Finance Tracker API", lifespan=lifespan)
 
+    session_kw = _session_middleware_kwargs()
     app.add_middleware(
         SessionMiddleware,
         secret_key=get_session_secret_value(),
-        same_site="lax",
-        https_only=False,
+        **session_kw,
     )
     app.add_middleware(
         CORSMiddleware,
