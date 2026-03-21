@@ -3,6 +3,7 @@ __pycache__/
 .Python
 .env
 .venv/
+.venv-*/
 venv/
 .env.local
 web/node_modules/
