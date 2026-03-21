@@ -21,7 +21,7 @@ export default function LoginPage() {
       if (!sessionOk) {
         if (!tokenReceived) {
           throw new Error(
-            'The API did not return a login token. On Render: set Start Command to PYTHONPATH=. python -m uvicorn run_api:app --host 0.0.0.0 --port $PORT and Build to pip install -r requirements.txt, then redeploy. Test POST /auth/login in /docs — body should include "token".',
+            'The API did not return a login token. On Render: Build = pip install -r requirements.txt; Start = PYTHONPATH=. python -m uvicorn finance_tracker.api.main:app --host 0.0.0.0 --port $PORT; Root Directory = empty (repo root). Redeploy and check logs for exit 1 / ImportError.',
           )
         }
         throw new Error(

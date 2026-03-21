@@ -30,18 +30,48 @@ If `CORS_ORIGINS` is unset, the API defaults to `http://localhost:5173` and `htt
 
 If you still see “session cookie” errors: check the browser is not blocking **third‑party cookies** for the API (try another browser or turn off strict blocking for a test).
 
-## Render (API) — start command and build
+## Render (API) — build, start command, exit 127 / exit 1
 
-**Symptom:** `bash: uvicorn: command not found` (exit 127). The venv has no `uvicorn` on `PATH`, or dependencies were never installed.
+**Build command** (set explicitly if Render asks):
 
-1. **Build command** (if you use one): `pip install -r requirements.txt` (from repo root).
-2. **Start command** — use the module form so it always finds Uvicorn after `pip install`:
-   ```bash
-   PYTHONPATH=. python -m uvicorn run_api:app --host 0.0.0.0 --port $PORT
-   ```
-   Do **not** rely on bare `uvicorn ...` unless your platform puts the venv `bin` on `PATH`.
+```bash
+pip install -r requirements.txt
+```
 
-After a successful deploy, logs should show Uvicorn listening (no exit 127). `POST /auth/login` must return JSON including a **`token`** field for the Hostinger SPA; if it does not, the running service is an old build or the wrong start command.
+Run it from the **repository root** (the folder that contains `requirements.txt` and `finance_tracker/`).
+
+### Start command (use this — avoids `run_api.py` path issues)
+
+Prefer loading the app from the package (works even if **Root Directory** or missing `run_api.py` confuses Render):
+
+```bash
+PYTHONPATH=. python -m uvicorn finance_tracker.api.main:app --host 0.0.0.0 --port $PORT
+```
+
+**Alternative** (only if the repo root is the service root and [`run_api.py`](../run_api.py) is present):
+
+```bash
+PYTHONPATH=. python -m uvicorn run_api:app --host 0.0.0.0 --port $PORT
+```
+
+Do **not** use bare `uvicorn ...` on Render unless you know the venv `bin` is on `PATH`.
+
+### Troubleshooting
+
+| Log / exit | Meaning |
+|------------|--------|
+| **`uvicorn: command not found`** (exit **127**) | Uvicorn not installed → run **`pip install -r requirements.txt`** in build; use **`python -m uvicorn`**. |
+| **Exited with status 1** while running | Uvicorn started but **failed to import the app** (wrong **Root Directory**, missing file, or Python error). Fix **Root Directory** to repo root, or use **`finance_tracker.api.main:app`** above. Check **Deploy logs** for `ModuleNotFoundError` or `Traceback`. |
+| **Build failed** | Open the **Build** log — fix `pip` errors (network, conflicting pins). |
+
+**Sanity check** (same as Render’s import step; run locally with repo root as cwd):
+
+```bash
+set PYTHONPATH=.
+python -c "from finance_tracker.api.main import app; print('OK', app.title)"
+```
+
+After a good deploy, logs should show Uvicorn listening. `POST /auth/login` should return JSON with a **`token`** field for the Hostinger SPA.
 
 ## Hostinger (frontend)
 

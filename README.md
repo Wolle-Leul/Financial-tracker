@@ -18,7 +18,7 @@ python -m venv .venv
 pip install -r requirements.txt
 set PYTHONPATH=.
 set PASSWORD=yourdevpassword
-python -m uvicorn run_api:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn finance_tracker.api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### 2. Web app
@@ -66,4 +66,4 @@ pytest
 - `POST /api/imports/pdf` — upload bank statement PDF.
 - `GET /api/imports/{id}/uncategorized`, `PATCH /api/transactions/{id}` — map uncategorized lines.
 
-Run `uvicorn run_api:app` or `python -m uvicorn run_api:app`.
+Run `python -m uvicorn finance_tracker.api.main:app` (or `run_api:app` if you use [`run_api.py`](run_api.py)).
