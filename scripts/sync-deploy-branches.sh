@@ -21,7 +21,7 @@ git push origin frontend --force-with-lease
 echo "==> backend branch (no web/)"
 git checkout -B backend main
 git rm -rf web/
-git commit -m "chore(deploy): backend-only — no web/ (SPA on frontend branch)"
+git commit -m "chore(deploy): backend-only - no web/ (SPA on frontend branch)"
 git push origin backend --force-with-lease
 
 git checkout main
