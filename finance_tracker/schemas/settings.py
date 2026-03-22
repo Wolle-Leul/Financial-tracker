@@ -105,3 +105,38 @@ class MonthlyTrendPoint(BaseModel):
 
 class TrendsResponse(BaseModel):
     months: List[MonthlyTrendPoint]
+
+
+class IncomeRowSync(BaseModel):
+    """Full row snapshot for bulk sync (overwrites label + amounts for this id)."""
+
+    id: int = Field(..., gt=0)
+    label: str = Field(..., min_length=1, max_length=120)
+    net_amount: Optional[Decimal] = None
+    gross_amount: Optional[Decimal] = None
+
+
+class RecurringRowSync(BaseModel):
+    subcategory_id: int = Field(..., gt=0)
+    planned_amount: Optional[float] = None
+    planned_deadline_day: Optional[int] = Field(None, ge=1, le=31)  # None clears deadline in DB
+
+
+class SettingsSyncRequest(BaseModel):
+    """
+    Persist all dashboard-driving inputs in one request (single DB transaction).
+
+    Stored in: salary_rules, income_sources, subcategories (planned fields).
+    """
+
+    salary_day_of_month: int = Field(..., ge=1, le=31)
+    target_ratio: float = Field(..., gt=0, lt=1)
+    budget_strategy: str = Field(..., max_length=64)
+    income_rows: List[IncomeRowSync] = Field(default_factory=list)
+    recurring_rows: List[RecurringRowSync] = Field(default_factory=list)
+
+
+class SettingsSyncResponse(BaseModel):
+    salary_rule: SalaryRuleResponse
+    income_rows_updated: int
+    recurring_rows_updated: int
