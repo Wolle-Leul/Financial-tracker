@@ -2,7 +2,7 @@
 
 Personal finance dashboard with PDF import, salary-window metrics, and category mapping.
 
-**Branches:** `main`, `frontend`, and `backend` are kept at the **same commit** (full stack: API + `web/` + migrations). Use either name for feature work; push to `main` when you want the default branch updated.
+**Branches:** Work in **`main`** (full monorepo: API + `web/` + Alembic). For **separate deploys**, use **`frontend`** (SPA only — contents of `web/` at repo root) and **`backend`** (Python API only — no `web/`). Refresh those branches with [`scripts/sync-deploy-branches.ps1`](scripts/sync-deploy-branches.ps1) (or `.sh`) after merging to `main`. See [docs/DEPLOY.md](docs/DEPLOY.md#git-branches-for-separate-deploys).
 
 ## Architecture
 

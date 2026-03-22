@@ -5,6 +5,16 @@ The app is split into two deployable units:
 1. **Frontend** — Vite + React in [`web/`](../web/). Build output is static files in `web/dist/`, suitable for Hostinger Node/static hosting.
 2. **Backend** — FastAPI in [`finance_tracker/api/`](../finance_tracker/api/). Run with Uvicorn on any host that supports Python (Render, Railway, Fly.io, a VPS, etc.).
 
+### Git branches for separate deploys
+
+| Branch | Contents | Typical host |
+|--------|----------|--------------|
+| **`main`** | Full monorepo (`web/` + Python + Alembic). Use for local dev and integration. | — |
+| **`frontend`** | **SPA only** — history of [`web/`](../web/) with files at the **repository root** (`package.json`, `src/`, …). Point Hostinger / Netlify / Vite CI at this branch; build: `npm ci && npm run build`. | Static / CDN |
+| **`backend`** | **API only** — same tree as `main` but **without** the `web/` directory. Point Render / Railway at this branch; run from repo root with `requirements.txt` + `finance_tracker/`. | Python host |
+
+Do **not** expect `frontend` and `backend` to share the same commit SHA as `main`; they are **derived** branches. After you merge work into `main`, run [`scripts/sync-deploy-branches.ps1`](../scripts/sync-deploy-branches.ps1) (Windows) or [`scripts/sync-deploy-branches.sh`](../scripts/sync-deploy-branches.sh) (macOS/Linux) to refresh both deploy branches, then push (`--force-with-lease` is used for `frontend` because subtree split rewrites that branch’s history).
+
 ## Environment variables (API)
 
 | Variable | Purpose |
@@ -87,6 +97,14 @@ python -c "from finance_tracker.api.main import app; print('OK', app.title)"
 After a good deploy, logs should show Uvicorn listening. `POST /auth/login` should return JSON with a **`token`** field for the Hostinger SPA.
 
 ## Hostinger (frontend)
+
+If you use the **`frontend`** Git branch (SPA at repo root), build with:
+
+```bash
+npm ci && npm run build
+```
+
+From **`main`**, build from the `web/` folder instead:
 
 1. Build: `cd web && npm ci && npm run build`.
 2. Deploy `web/dist/` contents to your site root (or follow Hostinger’s Node/Vite deployment flow if you use their Git integration).
