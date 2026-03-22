@@ -51,6 +51,7 @@ class IncomeSourceItem(BaseModel):
     net_amount: Optional[float] = None
     use_net_only: bool
     sort_order: int
+    salary_day_of_month: Optional[int] = Field(None, ge=1, le=31)
 
 
 class IncomeSourceCreate(BaseModel):
@@ -61,6 +62,7 @@ class IncomeSourceCreate(BaseModel):
     net_amount: Optional[Decimal] = None
     use_net_only: bool = True
     sort_order: int = 0
+    salary_day_of_month: Optional[int] = Field(None, ge=1, le=31)
 
 
 class IncomeSourcePatch(BaseModel):
@@ -71,6 +73,7 @@ class IncomeSourcePatch(BaseModel):
     net_amount: Optional[Decimal] = None
     use_net_only: Optional[bool] = None
     sort_order: Optional[int] = None
+    salary_day_of_month: Optional[int] = Field(None, ge=1, le=31)
 
 
 class SubcategoryRecurringItem(BaseModel):
@@ -114,6 +117,7 @@ class IncomeRowSync(BaseModel):
     label: str = Field(..., min_length=1, max_length=120)
     net_amount: Optional[Decimal] = None
     gross_amount: Optional[Decimal] = None
+    salary_day_of_month: Optional[int] = Field(None, ge=1, le=31)
 
 
 class RecurringRowSync(BaseModel):

@@ -30,7 +30,7 @@ class DashboardResponse(BaseModel):
     filter_categories: List[str] = Field(default_factory=list)
     filter_subcategories: List[str] = Field(default_factory=list)
     days_till_next_salary: int
-    days_left_for_infy_label: str
+    salary_countdown_label: str
     due_salary_date: str
     groceries_amount: float
     net_of_net: float

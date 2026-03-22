@@ -3,15 +3,15 @@ from __future__ import annotations
 import calendar
 import json
 from datetime import datetime, timedelta
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 import pandas as pd
 from sqlalchemy import func, select
 
-from finance_tracker.calendar_plot import generate_calendar_html
+from finance_tracker.calendar_plot import build_calendar_salary_markers_for_month, generate_calendar_html
 from finance_tracker.charts import make_sankey_income_expense
 from finance_tracker.config import get_config
-from finance_tracker.db.models import Category, Import as ImportModel, SubCategory, Transaction
+from finance_tracker.db.models import Category, Import as ImportModel, IncomeSource, SubCategory, Transaction
 from finance_tracker.db.salary_rule import get_or_create_salary_rule
 from finance_tracker.db.session import session_scope
 from finance_tracker.holidays import get_holidays_poland
@@ -22,6 +22,7 @@ from finance_tracker.metrics import (
 )
 from finance_tracker.services.income_expectations import sum_expected_net_monthly
 from finance_tracker.salary import compute_salary_dates
+from finance_tracker.salary_countdown import compute_salary_countdown
 from finance_tracker.schemas.dashboard import DashboardResponse, KpiItem, ToPayRow
 
 
@@ -109,6 +110,25 @@ def build_dashboard_response(
         reference_date,
         holidays_all,
         salary_day_of_month=salary_dom,
+    )
+
+    with session_scope() as session:
+        inc_rows = (
+            session.execute(
+                select(IncomeSource.label, IncomeSource.salary_day_of_month)
+                .where(IncomeSource.user_id == user_id)
+                .order_by(IncomeSource.sort_order)
+            )
+            .all()
+        )
+    income_countdown_rows: List[Tuple[str, Optional[int]]] = [
+        (str(lab), int(dom) if dom is not None else None) for lab, dom in inc_rows
+    ]
+    salary_cd = compute_salary_countdown(
+        income_countdown_rows,
+        reference_date=reference_date,
+        holidays=holidays_all,
+        default_pay_day=salary_dom,
     )
     cfg = get_config()
     target_ratio = float(salary_rule.target_ratio) if salary_rule.target_ratio is not None else cfg.target_ratio
@@ -303,12 +323,16 @@ def build_dashboard_response(
     fig = make_sankey_income_expense(incomes_df=incomes_df, expenses_df_filtered=expenses_sankey_df)
     sankey_plotly = json.loads(fig.to_json())
 
+    cal_markers = build_calendar_salary_markers_for_month(
+        year, month, holidays_all, salary_dom, income_countdown_rows
+    )
     calendar_html = generate_calendar_html(
         year=year,
         month=month,
         holidays=holidays_all,
         today=today,
         salary_date=salary_dom,
+        salary_markers_by_day=cal_markers if cal_markers else None,
     )
 
     to_pay_empty_reason: Optional[str] = None
@@ -348,9 +372,9 @@ def build_dashboard_response(
         kpis=kpis,
         filter_categories=filter_categories,
         filter_subcategories=filter_subcategories,
-        days_till_next_salary=metrics.days_till_next_salary,
-        days_left_for_infy_label=f"{metrics.days_till_next_salary} days left for infy",
-        due_salary_date=metrics.due_salary_date.strftime("%Y-%m-%d"),
+        days_till_next_salary=salary_cd.days,
+        salary_countdown_label=salary_cd.label_text,
+        due_salary_date=salary_cd.due_date.strftime("%Y-%m-%d"),
         groceries_amount=float(metrics.groceries_amount),
         net_of_net=float(metrics.net_of_net),
         needs_percent=float(metrics.needs_percent),

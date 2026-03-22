@@ -98,7 +98,7 @@ export type DashboardResponse = {
   filter_categories: string[]
   filter_subcategories: string[]
   days_till_next_salary: number
-  days_left_for_infy_label: string
+  salary_countdown_label: string
   due_salary_date: string
   groceries_amount: number
   net_of_net: number
@@ -233,6 +233,7 @@ export type SettingsSyncBody = {
     label?: string
     net_amount?: number | null
     gross_amount?: number | null
+    salary_day_of_month?: number | null
   }>
   recurring_rows: Array<{
     subcategory_id: number
@@ -265,6 +266,7 @@ export type IncomeSource = {
   net_amount?: number | null
   use_net_only: boolean
   sort_order: number
+  salary_day_of_month?: number | null
 }
 
 export async function fetchIncomeSources(): Promise<IncomeSource[]> {

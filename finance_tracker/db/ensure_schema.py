@@ -47,3 +47,13 @@ def ensure_schema_extensions() -> None:
     if not insp.has_table("income_sources"):
         _log.warning("ensure_schema: creating income_sources table (migration not applied yet)")
         IncomeSource.__table__.create(bind=engine, checkfirst=True)
+    else:
+        inc_cols = {c["name"] for c in insp.get_columns("income_sources")}
+        if "salary_day_of_month" not in inc_cols:
+            _log.warning("ensure_schema: adding income_sources.salary_day_of_month (migration not applied yet)")
+            dialect = engine.dialect.name
+            with engine.begin() as conn:
+                if dialect == "postgresql":
+                    conn.execute(text("ALTER TABLE income_sources ADD COLUMN IF NOT EXISTS salary_day_of_month INTEGER"))
+                else:
+                    conn.execute(text("ALTER TABLE income_sources ADD COLUMN salary_day_of_month INTEGER"))

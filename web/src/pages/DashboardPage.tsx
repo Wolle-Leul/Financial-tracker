@@ -160,9 +160,19 @@ export default function DashboardPage() {
   return (
     <div className="page-pad dashboard">
       <header className="page-header">
-        <div>
+        <div className="header-brand">
           <h1>Finance Tracker</h1>
-          <span className="status-pill">{d.days_left_for_infy_label}</span>
+          <div className="header-countdown-wrap">
+            <span className="status-pill">{d.salary_countdown_label}</span>
+            <p
+              className="header-countdown-sub muted"
+              title="KPIs and charts use the global pay window from Settings. The countdown picks the nearest pay among your income streams (each can have its own pay day)."
+            >
+              Next pay: <strong className="header-countdown-date">{d.due_salary_date}</strong>
+              <span className="header-countdown-sep"> · </span>
+              <span className="header-countdown-hint">Sums use your global salary window.</span>
+            </p>
+          </div>
         </div>
         <div className="header-actions">
           <Link to="/settings" className="btn ghost">
@@ -306,7 +316,9 @@ export default function DashboardPage() {
         <section className="panel">
           <div className="panel-header">
             <h2>Calendar</h2>
-            <p className="panel-desc">Holidays, salary day, and today.</p>
+            <p className="panel-desc">
+              Holidays, today, and pay days (global + each income stream with its own pay day in Settings).
+            </p>
           </div>
           <div className="calendar-html" dangerouslySetInnerHTML={{ __html: d.calendar_html }} />
         </section>
@@ -316,7 +328,7 @@ export default function DashboardPage() {
             <p className="panel-desc">Key amounts for this view.</p>
           </div>
           <div className="metric-line">
-            <span className="metric-label">Due salary</span>
+            <span className="metric-label">Next pay (nearest)</span>
             <span className="metric-val">{d.due_salary_date}</span>
           </div>
           <div className="metric-line">
