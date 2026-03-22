@@ -563,12 +563,95 @@ kbd {
   margin-top: 1.35rem;
 }
 
+/* —— Settings page layout —— */
+.settings-page {
+  padding-bottom: 5.5rem;
+}
+
+.settings-db-banner {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  color: var(--muted2);
+}
+
+.settings-db-banner strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.settings-db-banner p {
+  margin: 0;
+  line-height: 1.45;
+  max-width: 62ch;
+}
+
+.settings-global-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 0.85rem clamp(1rem, 3vw, 1.75rem);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--bg-mid) 100%);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.settings-global-bar-copy {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.settings-global-bar-copy p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 56ch;
+}
+
+.settings-global-bar-code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent2);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.settings-global-bar-error {
+  margin: 0.5rem 0 0;
+}
+
+.settings-global-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 /* —— Settings —— */
 .header-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .settings-grid {
@@ -852,4 +935,47 @@ kbd {
 
 .budget-lines-table {
   margin-top: 1rem;
+}
+
+.settings-global-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem !important;
+  border: 1px solid rgba(110, 184, 255, 0.2) !important;
+  background: linear-gradient(165deg, rgba(23, 29, 46, 0.9) 0%, rgba(14, 18, 25, 0.95) 100%) !important;
+}
+
+.settings-explain-panel {
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(110, 184, 255, 0.2) !important;
+  background: linear-gradient(165deg, rgba(23, 29, 46, 0.9) 0%, rgba(14, 18, 25, 0.95) 100%) !important;
+}
+
+.settings-explain-panel-text strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+  color: var(--text);
+}
+
+.settings-explain-panel-text p {
+  margin: 0;
+  max-width: 72ch;
+  line-height: 1.45;
+}
+
+.page-sync-err {
+  margin: 0 0 1rem;
+}
+
+.settings-footer-note {
+  margin-top: 0.5rem;
+}
+
+.settings-footer-note code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
 }

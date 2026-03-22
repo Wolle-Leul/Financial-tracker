@@ -193,6 +193,40 @@ export async function patchSalaryRuleSettings(body: Partial<SalaryRuleSettings>)
   return r.json() as Promise<SalaryRuleSettings>
 }
 
+/** Persist salary rule + all income rows + all recurring rows in one DB transaction (used for global Save). */
+export type SettingsSyncBody = {
+  salary_day_of_month: number
+  target_ratio: number
+  budget_strategy: string
+  income_rows: Array<{
+    id: number
+    label?: string
+    net_amount?: number | null
+    gross_amount?: number | null
+  }>
+  recurring_rows: Array<{
+    subcategory_id: number
+    planned_amount?: number | null
+    planned_deadline_day?: number | null
+  }>
+}
+
+export type SettingsSyncResponse = {
+  salary_rule: SalaryRuleSettings
+  income_rows_updated: number
+  recurring_rows_updated: number
+}
+
+export async function postSettingsSync(body: SettingsSyncBody): Promise<SettingsSyncResponse> {
+  const r = await apiFetch('/api/settings/sync', { method: 'POST', body: JSON.stringify(body) })
+  if (r.status === 401) throw new Error('UNAUTHORIZED')
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}))
+    throw new Error((err as { detail?: string }).detail || r.statusText)
+  }
+  return r.json() as Promise<SettingsSyncResponse>
+}
+
 export type IncomeSource = {
   id: number
   label: string
