@@ -42,6 +42,8 @@ function numOrNullFromString(v: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+type IncomeRowDraft = { label: string; net: string; gross: string; payDay: string }
+
 /** Pay day 1–31 for an income stream; empty → use global pay day from settings. */
 function payDayOrNullFromString(v: string): number | null {
   if (v.trim() === '') return null
@@ -107,9 +109,7 @@ export default function SettingsPage() {
   const [newLineKw, setNewLineKw] = useState('')
 
   /** Drafts mirror DB rows; global sync sends all of this in one POST /api/settings/sync transaction. */
-  const [incomeDrafts, setIncomeDrafts] = useState<
-    Record<number, { label: string; net: string; gross: string; payDay: string }>
-  >({})
+  const [incomeDrafts, setIncomeDrafts] = useState<Record<number, IncomeRowDraft>>({})
   const [recurringDrafts, setRecurringDrafts] = useState<
     Record<number, { amt: string | number; day: string | number }>
   >({})
@@ -127,6 +127,7 @@ export default function SettingsPage() {
             label: row.label,
             net: String(row.net_amount ?? ''),
             gross: String(row.gross_amount ?? ''),
+            payDay: row.salary_day_of_month != null ? String(row.salary_day_of_month) : '',
           }
         }
       }
@@ -729,8 +730,8 @@ function IncomeRow({
   onRowDeleted,
 }: {
   row: IncomeSource
-  draft: { label: string; net: string; gross: string }
-  onDraftChange: (d: { label: string; net: string; gross: string }) => void
+  draft: IncomeRowDraft
+  onDraftChange: (d: IncomeRowDraft) => void
   onChanged: () => void
   onRowDeleted: () => void
 }) {
