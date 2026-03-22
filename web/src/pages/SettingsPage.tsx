@@ -17,6 +17,7 @@ import {
   patchIncomeSource,
   patchRecurringExpense,
   patchSalaryRuleSettings,
+  postSettingsSync,
   type IncomeSource,
   type RecurringExpenseRow,
 } from '../api/client'
@@ -87,6 +88,97 @@ export default function SettingsPage() {
   const [newLineCat, setNewLineCat] = useState<number | ''>('')
   const [newLineName, setNewLineName] = useState('')
   const [newLineKw, setNewLineKw] = useState('')
+
+  /** Drafts mirror DB rows; global sync sends all of this in one POST /api/settings/sync transaction. */
+  const [incomeDrafts, setIncomeDrafts] = useState<
+    Record<number, { label: string; net: string; gross: string }>
+  >({})
+  const [recurringDrafts, setRecurringDrafts] = useState<
+    Record<number, { amt: string | number; day: string | number }>
+  >({})
+  const [syncing, setSyncing] = useState(false)
+  const [syncErr, setSyncErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!incomeQ.data) return
+    setIncomeDrafts((prev) => {
+      const next = { ...prev }
+      for (const row of incomeQ.data) {
+        if (next[row.id] == null) {
+          next[row.id] = {
+            label: row.label,
+            net: String(row.net_amount ?? ''),
+            gross: String(row.gross_amount ?? ''),
+          }
+        }
+      }
+      return next
+    })
+  }, [incomeQ.data])
+
+  useEffect(() => {
+    if (!recurringQ.data) return
+    setRecurringDrafts((prev) => {
+      const next = { ...prev }
+      for (const row of recurringQ.data) {
+        if (next[row.id] == null) {
+          next[row.id] = {
+            amt: row.planned_amount ?? '',
+            day: row.planned_deadline_day ?? '',
+          }
+        }
+      }
+      return next
+    })
+  }, [recurringQ.data])
+
+  async function saveAllToDatabaseAndOpenDashboard() {
+    setSyncErr(null)
+    setSyncing(true)
+    try {
+      const income_rows = (incomeQ.data ?? []).map((row) => {
+        const d = incomeDrafts[row.id] ?? {
+          label: row.label,
+          net: String(row.net_amount ?? ''),
+          gross: String(row.gross_amount ?? ''),
+        }
+        return {
+          id: row.id,
+          label: (d.label.trim() || row.label).slice(0, 120),
+          net_amount: d.net === '' ? null : Number(d.net),
+          gross_amount: d.gross === '' ? null : Number(d.gross),
+        }
+      })
+      const recurring_rows = (recurringQ.data ?? []).map((row) => {
+        const d = recurringDrafts[row.id] ?? {
+          amt: row.planned_amount ?? '',
+          day: row.planned_deadline_day ?? '',
+        }
+        return {
+          subcategory_id: row.id,
+          planned_amount: d.amt === '' ? null : Number(d.amt),
+          planned_deadline_day: d.day === '' ? null : Number(d.day),
+        }
+      })
+      await postSettingsSync({
+        salary_day_of_month: salaryDay,
+        target_ratio: targetRatio,
+        budget_strategy: strategy,
+        income_rows,
+        recurring_rows,
+      })
+      void qc.invalidateQueries({ queryKey: ['settings', 'salary-rule'] })
+      void qc.invalidateQueries({ queryKey: ['income-sources'] })
+      void qc.invalidateQueries({ queryKey: ['recurring-expenses'] })
+      void qc.invalidateQueries({ queryKey: ['budget-labels'] })
+      await qc.refetchQueries({ queryKey: ['dashboard'] })
+      nav('/')
+    } catch (e) {
+      setSyncErr(e instanceof Error ? e.message : 'Sync failed')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const addLine = useMutation({
     mutationFn: () =>
@@ -184,13 +276,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="page-pad dashboard">
+    <div className="page-pad dashboard settings-page">
       <header className="page-header">
         <div>
           <h1>Settings &amp; onboarding</h1>
           <span className="status-pill">{STRATEGIES.find((s) => s.value === strategy)?.label ?? strategy}</span>
         </div>
         <div className="header-actions">
+          <button
+            type="button"
+            className="btn primary settings-cta-dash"
+            disabled={syncing}
+            onClick={() => void saveAllToDatabaseAndOpenDashboard()}
+          >
+            {syncing ? 'Saving to database…' : 'Save all to database → dashboard'}
+          </button>
           <Link to="/" className="btn ghost">
             Dashboard
           </Link>
@@ -199,6 +299,18 @@ export default function SettingsPage() {
           </button>
         </div>
       </header>
+
+      <div className="settings-db-banner">
+        <strong>Stored in your database (Supabase / Postgres)</strong>
+        <p>
+          The green <strong>Save all to database → dashboard</strong> button calls <code>POST /api/settings/sync</code>: one
+          transaction that writes <strong>salary_rules</strong> (pay day, target %, strategy), every{' '}
+          <strong>income_sources</strong> row, and every recurring <strong>subcategories</strong> plan. The dashboard reads
+          those tables on load for the salary window, expected-income banner, KPI copy, and &quot;to pay&quot; math. Row-level
+          &quot;Save row&quot; still works for quick single-line updates.
+        </p>
+      </div>
+      {syncErr ? <p className="error page-sync-err">{syncErr}</p> : null}
 
       <section className="panel">
         <div className="panel-header">
@@ -242,28 +354,21 @@ export default function SettingsPage() {
         </div>
         <div className="settings-actions-row">
           <button type="button" className="btn primary" disabled={saveSettings.isPending} onClick={() => saveSettings.mutate()}>
-            {saveSettings.isPending ? 'Saving…' : 'Save pay & budget settings'}
+            {saveSettings.isPending ? 'Saving…' : 'Save pay fields only'}
           </button>
           <button
             type="button"
             className="btn primary settings-cta-dash"
-            disabled={saveSettings.isPending}
-            onClick={() =>
-              saveSettings.mutate(undefined, {
-                onSuccess: () => {
-                  void qc.invalidateQueries({ queryKey: ['dashboard'] })
-                  nav('/')
-                },
-              })
-            }
+            disabled={syncing}
+            onClick={() => void saveAllToDatabaseAndOpenDashboard()}
           >
-            Save &amp; open dashboard
+            {syncing ? 'Saving…' : 'Save all to database → dashboard'}
           </button>
         </div>
         {saveSettings.isError && <p className="error">{(saveSettings.error as Error).message}</p>}
         <p className="hint settings-hint">
-          Pay day and strategy apply to the calendar, salary window, and KPIs as soon as you save. Use &quot;Save &amp; open
-          dashboard&quot; to return and see them immediately.
+          &quot;Save pay fields only&quot; updates <code>salary_rules</code> via PATCH. Use the green button (here or in the
+          header) to sync pay + income + recurring in one go.
         </p>
       </section>
 
@@ -354,9 +459,30 @@ export default function SettingsPage() {
           </button>
         </div>
         <ul className="settings-list">
-          {(incomeQ.data ?? []).map((row: IncomeSource) => (
-            <IncomeRow key={row.id} row={row} onChanged={() => void qc.invalidateQueries({ queryKey: ['dashboard'] })} />
-          ))}
+          {(incomeQ.data ?? []).map((row: IncomeSource) => {
+            const draft =
+              incomeDrafts[row.id] ?? {
+                label: row.label,
+                net: String(row.net_amount ?? ''),
+                gross: String(row.gross_amount ?? ''),
+              }
+            return (
+              <IncomeRow
+                key={row.id}
+                row={row}
+                draft={draft}
+                onDraftChange={(d) => setIncomeDrafts((p) => ({ ...p, [row.id]: d }))}
+                onChanged={() => void qc.invalidateQueries({ queryKey: ['dashboard'] })}
+                onRowDeleted={() => {
+                  setIncomeDrafts((p) => {
+                    const n = { ...p }
+                    delete n[row.id]
+                    return n
+                  })
+                }}
+              />
+            )
+          })}
         </ul>
       </section>
 
@@ -471,9 +597,21 @@ export default function SettingsPage() {
               </tr>
             </thead>
             <tbody>
-              {(recurringQ.data ?? []).map((r: RecurringExpenseRow) => (
-                <RecurringEditor key={r.id} row={r} />
-              ))}
+              {(recurringQ.data ?? []).map((r: RecurringExpenseRow) => {
+                const draft =
+                  recurringDrafts[r.id] ?? {
+                    amt: r.planned_amount ?? '',
+                    day: r.planned_deadline_day ?? '',
+                  }
+                return (
+                  <RecurringEditor
+                    key={r.id}
+                    row={r}
+                    draft={draft}
+                    onDraftChange={(d) => setRecurringDrafts((p) => ({ ...p, [r.id]: d }))}
+                  />
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -512,22 +650,38 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      <div className="panel settings-footer-note">
+        <p className="muted small">
+          Same as the header: use <strong>Save all to database → dashboard</strong> after editing any section so pay
+          schedule, income, and recurring plans all reach the database before the dashboard reloads.
+        </p>
+      </div>
     </div>
   )
 }
 
-function IncomeRow({ row, onChanged }: { row: IncomeSource; onChanged: () => void }) {
+function IncomeRow({
+  row,
+  draft,
+  onDraftChange,
+  onChanged,
+  onRowDeleted,
+}: {
+  row: IncomeSource
+  draft: { label: string; net: string; gross: string }
+  onDraftChange: (d: { label: string; net: string; gross: string }) => void
+  onChanged: () => void
+  onRowDeleted: () => void
+}) {
   const qc = useQueryClient()
-  const [net, setNet] = useState(String(row.net_amount ?? ''))
-  const [gross, setGross] = useState(String(row.gross_amount ?? ''))
-  const [label, setLabel] = useState(row.label)
 
   const patch = useMutation({
     mutationFn: () =>
       patchIncomeSource(row.id, {
-        label,
-        net_amount: net ? Number(net) : undefined,
-        gross_amount: gross ? Number(gross) : undefined,
+        label: draft.label,
+        net_amount: draft.net ? Number(draft.net) : undefined,
+        gross_amount: draft.gross ? Number(draft.gross) : undefined,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['income-sources'] })
@@ -538,6 +692,7 @@ function IncomeRow({ row, onChanged }: { row: IncomeSource; onChanged: () => voi
   const del = useMutation({
     mutationFn: () => deleteIncomeSource(row.id),
     onSuccess: () => {
+      onRowDeleted()
       void qc.invalidateQueries({ queryKey: ['income-sources'] })
       onChanged()
     },
@@ -545,18 +700,28 @@ function IncomeRow({ row, onChanged }: { row: IncomeSource; onChanged: () => voi
 
   return (
     <li className="settings-list-item">
-      <input className="input" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <input
+        className="input"
+        value={draft.label}
+        onChange={(e) => onDraftChange({ ...draft, label: e.target.value })}
+      />
       <span className="muted">{row.contract_type}</span>
       <input
         className="input"
         type="number"
         placeholder="Gross"
-        value={gross}
-        onChange={(e) => setGross(e.target.value)}
+        value={draft.gross}
+        onChange={(e) => onDraftChange({ ...draft, gross: e.target.value })}
       />
-      <input className="input" type="number" placeholder="Net" value={net} onChange={(e) => setNet(e.target.value)} />
+      <input
+        className="input"
+        type="number"
+        placeholder="Net"
+        value={draft.net}
+        onChange={(e) => onDraftChange({ ...draft, net: e.target.value })}
+      />
       <button type="button" className="btn ghost" onClick={() => patch.mutate()}>
-        Save
+        Save row
       </button>
       <button type="button" className="btn ghost" onClick={() => del.mutate()}>
         Delete
@@ -565,16 +730,22 @@ function IncomeRow({ row, onChanged }: { row: IncomeSource; onChanged: () => voi
   )
 }
 
-function RecurringEditor({ row }: { row: RecurringExpenseRow }) {
+function RecurringEditor({
+  row,
+  draft,
+  onDraftChange,
+}: {
+  row: RecurringExpenseRow
+  draft: { amt: string | number; day: string | number }
+  onDraftChange: (d: { amt: string | number; day: string | number }) => void
+}) {
   const qc = useQueryClient()
-  const [amt, setAmt] = useState(row.planned_amount ?? '')
-  const [day, setDay] = useState(row.planned_deadline_day ?? '')
 
   const patch = useMutation({
     mutationFn: () =>
       patchRecurringExpense(row.id, {
-        planned_amount: amt === '' ? undefined : Number(amt),
-        planned_deadline_day: day === '' ? undefined : Number(day),
+        planned_amount: draft.amt === '' ? undefined : Number(draft.amt),
+        planned_deadline_day: draft.day === '' ? undefined : Number(draft.day),
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['recurring-expenses'] })
@@ -590,8 +761,10 @@ function RecurringEditor({ row }: { row: RecurringExpenseRow }) {
         <input
           className="input table-input"
           type="number"
-          value={amt}
-          onChange={(e) => setAmt(e.target.value === '' ? '' : Number(e.target.value))}
+          value={draft.amt}
+          onChange={(e) =>
+            onDraftChange({ ...draft, amt: e.target.value === '' ? '' : Number(e.target.value) })
+          }
         />
       </td>
       <td>
@@ -600,13 +773,15 @@ function RecurringEditor({ row }: { row: RecurringExpenseRow }) {
           type="number"
           min={1}
           max={31}
-          value={day}
-          onChange={(e) => setDay(e.target.value === '' ? '' : Number(e.target.value))}
+          value={draft.day}
+          onChange={(e) =>
+            onDraftChange({ ...draft, day: e.target.value === '' ? '' : Number(e.target.value) })
+          }
         />
       </td>
       <td>
         <button type="button" className="btn ghost" onClick={() => patch.mutate()}>
-          Save
+          Save row
         </button>
       </td>
     </tr>

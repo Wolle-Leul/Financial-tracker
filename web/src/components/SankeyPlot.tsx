@@ -18,7 +18,13 @@ export default function SankeyPlot({ figure }: Props) {
       layout={layout}
       style={{ width: '100%', height: 420 }}
       useResizeHandler
-      config={{ displayModeBar: false }}
+      config={{
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false,
+        scrollZoom: true,
+        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+      }}
     />
   )
 }

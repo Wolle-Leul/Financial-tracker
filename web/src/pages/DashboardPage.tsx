@@ -78,7 +78,9 @@ export default function DashboardPage() {
         subcategories: subcategories.length ? subcategories : undefined,
       }),
     enabled: authReady,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     gcTime: 10 * 60_000,
   })
 
