@@ -979,3 +979,14 @@ kbd {
   font-family: var(--font-mono);
   font-size: 0.8rem;
 }
+
+.error-panel {
+  border-color: rgba(251, 113, 133, 0.45) !important;
+  background: rgba(251, 113, 133, 0.06) !important;
+}
+
+.error-panel strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}

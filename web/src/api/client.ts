@@ -7,6 +7,29 @@ export function clearAuthToken(): void {
   sessionStorage.removeItem(AUTH_TOKEN_KEY)
 }
 
+/** FastAPI often returns { detail: string | array }; static hosts return HTML — explain both. */
+export async function readApiErrorMessage(r: Response): Promise<string> {
+  const text = await r.text()
+  try {
+    const j = JSON.parse(text) as { detail?: unknown }
+    const d = j.detail
+    if (typeof d === 'string') return d
+    if (Array.isArray(d)) {
+      return d
+        .map((x) =>
+          typeof x === 'object' && x !== null && 'msg' in x ? String((x as { msg: string }).msg) : JSON.stringify(x),
+        )
+        .join('; ')
+    }
+  } catch {
+    /* not JSON */
+  }
+  if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+    return `HTTP ${r.status}: server returned HTML (not JSON). In production set VITE_API_BASE_URL to your API origin (e.g. https://….onrender.com).`
+  }
+  return text.trim().slice(0, 400) || `${r.status} ${r.statusText}`
+}
+
 async function apiFetch(path: string, init: RequestInit = {}) {
   const url = `${base()}${path.startsWith('/') ? path : `/${path}`}`
   const headers = new Headers(init.headers)
@@ -17,11 +40,22 @@ async function apiFetch(path: string, init: RequestInit = {}) {
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
   }
-  return fetch(url, {
-    ...init,
-    credentials: 'include',
-    headers,
-  })
+  try {
+    return await fetch(url, {
+      ...init,
+      credentials: 'include',
+      headers,
+    })
+  } catch (e) {
+    const hint =
+      base() === '' && import.meta.env.PROD
+        ? ' VITE_API_BASE_URL is empty — the SPA is calling the wrong host for /api.'
+        : ''
+    if (e instanceof TypeError) {
+      throw new Error(`Cannot reach API (${url || path}). ${hint}`.trim())
+    }
+    throw e
+  }
 }
 
 /** Set when POST /auth/login JSON includes `token` (Bearer auth for cross-origin SPA). */
@@ -119,8 +153,7 @@ export async function fetchDashboard(opts: {
   const r = await apiFetch(`/api/dashboard${q}`)
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
   return r.json() as Promise<DashboardResponse>
 }
@@ -135,8 +168,7 @@ export async function importPdf(file: File): Promise<{
   const r = await apiFetch('/api/imports/pdf', { method: 'POST', body: fd })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
   return r.json() as Promise<{
     import_id: number
@@ -153,7 +185,7 @@ export type UncategorizedResponse = {
 export async function fetchUncategorized(importId: number): Promise<UncategorizedResponse> {
   const r = await apiFetch(`/api/imports/${importId}/uncategorized`)
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
   return r.json() as Promise<UncategorizedResponse>
 }
 
@@ -164,8 +196,7 @@ export async function mapTransaction(transactionId: number, subcategoryId: numbe
   })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
 }
 
@@ -179,7 +210,7 @@ export type SalaryRuleSettings = {
 export async function fetchSalaryRuleSettings(): Promise<SalaryRuleSettings> {
   const r = await apiFetch('/api/settings/salary-rule')
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
   return r.json() as Promise<SalaryRuleSettings>
 }
 
@@ -187,8 +218,7 @@ export async function patchSalaryRuleSettings(body: Partial<SalaryRuleSettings>)
   const r = await apiFetch('/api/settings/salary-rule', { method: 'PATCH', body: JSON.stringify(body) })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
   return r.json() as Promise<SalaryRuleSettings>
 }
@@ -221,8 +251,7 @@ export async function postSettingsSync(body: SettingsSyncBody): Promise<Settings
   const r = await apiFetch('/api/settings/sync', { method: 'POST', body: JSON.stringify(body) })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
   return r.json() as Promise<SettingsSyncResponse>
 }
@@ -241,7 +270,7 @@ export type IncomeSource = {
 export async function fetchIncomeSources(): Promise<IncomeSource[]> {
   const r = await apiFetch('/api/income-sources')
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
   return r.json() as Promise<IncomeSource[]>
 }
 
@@ -249,8 +278,7 @@ export async function createIncomeSource(body: Omit<IncomeSource, 'id'>): Promis
   const r = await apiFetch('/api/income-sources', { method: 'POST', body: JSON.stringify(body) })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
   return r.json() as Promise<IncomeSource>
 }
@@ -268,7 +296,7 @@ export async function patchIncomeSource(id: number, body: Partial<IncomeSource>)
 export async function deleteIncomeSource(id: number): Promise<void> {
   const r = await apiFetch(`/api/income-sources/${id}`, { method: 'DELETE' })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
 }
 
 export type RecurringExpenseRow = {
@@ -282,7 +310,7 @@ export type RecurringExpenseRow = {
 export async function fetchRecurringExpenses(): Promise<RecurringExpenseRow[]> {
   const r = await apiFetch('/api/recurring-expenses')
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
   return r.json() as Promise<RecurringExpenseRow[]>
 }
 
@@ -321,7 +349,7 @@ export type TrendsResponse = { months: TrendPoint[] }
 export async function fetchTrends(months = 12): Promise<TrendsResponse> {
   const r = await apiFetch(`/api/analytics/trends?months=${months}`)
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
   return r.json() as Promise<TrendsResponse>
 }
 
@@ -336,7 +364,7 @@ export type BudgetLabelsResponse = { categories: BudgetCategory[] }
 export async function fetchBudgetLabels(): Promise<BudgetLabelsResponse> {
   const r = await apiFetch('/api/budget-labels')
   if (r.status === 401) throw new Error('UNAUTHORIZED')
-  if (!r.ok) throw new Error(await r.text())
+  if (!r.ok) throw new Error(await readApiErrorMessage(r))
   return r.json() as Promise<BudgetLabelsResponse>
 }
 
@@ -348,8 +376,7 @@ export async function createSubcategory(body: {
   const r = await apiFetch('/api/subcategories', { method: 'POST', body: JSON.stringify(body) })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
   return r.json() as Promise<{ id: number; category_id: number; name: string }>
 }
@@ -358,7 +385,6 @@ export async function deleteSubcategory(id: number): Promise<void> {
   const r = await apiFetch(`/api/subcategories/${id}`, { method: 'DELETE' })
   if (r.status === 401) throw new Error('UNAUTHORIZED')
   if (!r.ok) {
-    const err = await r.json().catch(() => ({}))
-    throw new Error((err as { detail?: string }).detail || r.statusText)
+    throw new Error(await readApiErrorMessage(r))
   }
 }
