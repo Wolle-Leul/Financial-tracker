@@ -2,6 +2,8 @@
 
 Personal finance dashboard with PDF import, salary-window metrics, and category mapping.
 
+**Branches:** `main`, `frontend`, and `backend` are kept at the **same commit** (full stack: API + `web/` + migrations). Use either name for feature work; push to `main` when you want the default branch updated.
+
 ## Architecture
 
 - **SPA (recommended):** React + Vite in [`web/`](web/) — talks to the REST API with cookie-based auth.
