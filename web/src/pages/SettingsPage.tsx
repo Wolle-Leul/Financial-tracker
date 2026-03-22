@@ -35,6 +35,13 @@ const CONTRACTS = [
   { value: 'other', label: 'Other' },
 ]
 
+/** Parse optional amount; empty → null; preserves 0. */
+function numOrNullFromString(v: string): number | null {
+  if (v.trim() === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
 export default function SettingsPage() {
   const nav = useNavigate()
   const qc = useQueryClient()
@@ -98,6 +105,7 @@ export default function SettingsPage() {
   >({})
   const [syncing, setSyncing] = useState(false)
   const [syncErr, setSyncErr] = useState<string | null>(null)
+  const [crudErr, setCrudErr] = useState<string | null>(null)
 
   useEffect(() => {
     if (!incomeQ.data) return
@@ -145,8 +153,8 @@ export default function SettingsPage() {
         return {
           id: row.id,
           label: (d.label.trim() || row.label).slice(0, 120),
-          net_amount: d.net === '' ? null : Number(d.net),
-          gross_amount: d.gross === '' ? null : Number(d.gross),
+          net_amount: numOrNullFromString(d.net),
+          gross_amount: numOrNullFromString(d.gross),
         }
       })
       const recurring_rows = (recurringQ.data ?? []).map((row) => {
@@ -154,10 +162,13 @@ export default function SettingsPage() {
           amt: row.planned_amount ?? '',
           day: row.planned_deadline_day ?? '',
         }
+        const amtStr = d.amt === '' || d.amt === undefined ? '' : String(d.amt)
+        const dayStr = d.day === '' || d.day === undefined ? '' : String(d.day)
         return {
           subcategory_id: row.id,
-          planned_amount: d.amt === '' ? null : Number(d.amt),
-          planned_deadline_day: d.day === '' ? null : Number(d.day),
+          planned_amount: numOrNullFromString(amtStr),
+          planned_deadline_day:
+            dayStr === '' ? null : Number.isFinite(Number(dayStr)) ? Number(dayStr) : null,
         }
       })
       await postSettingsSync({
@@ -188,21 +199,25 @@ export default function SettingsPage() {
         match_keywords: newLineKw.trim() || undefined,
       }),
     onSuccess: () => {
+      setCrudErr(null)
       setNewLineName('')
       setNewLineKw('')
       void qc.invalidateQueries({ queryKey: ['budget-labels'] })
       void qc.invalidateQueries({ queryKey: ['recurring-expenses'] })
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
+    onError: (e: Error) => setCrudErr(e.message),
   })
 
   const removeLine = useMutation({
     mutationFn: (id: number) => deleteSubcategory(id),
     onSuccess: () => {
+      setCrudErr(null)
       void qc.invalidateQueries({ queryKey: ['budget-labels'] })
       void qc.invalidateQueries({ queryKey: ['recurring-expenses'] })
       void qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
+    onError: (e: Error) => setCrudErr(e.message),
   })
 
   const [salaryDay, setSalaryDay] = useState(10)
@@ -311,6 +326,21 @@ export default function SettingsPage() {
         </p>
       </div>
       {syncErr ? <p className="error page-sync-err">{syncErr}</p> : null}
+      {crudErr ? <p className="error page-sync-err">{crudErr}</p> : null}
+      {(labelsQ.isError || incomeQ.isError || recurringQ.isError) && (
+        <div className="panel error-panel">
+          <strong>Could not load data from the API</strong>
+          {labelsQ.isError && (
+            <p className="error">Budget lines: {labelsQ.error instanceof Error ? labelsQ.error.message : 'Error'}</p>
+          )}
+          {incomeQ.isError && (
+            <p className="error">Income: {incomeQ.error instanceof Error ? incomeQ.error.message : 'Error'}</p>
+          )}
+          {recurringQ.isError && (
+            <p className="error">Recurring: {recurringQ.error instanceof Error ? recurringQ.error.message : 'Error'}</p>
+          )}
+        </div>
+      )}
 
       <section className="panel">
         <div className="panel-header">
@@ -680,8 +710,8 @@ function IncomeRow({
     mutationFn: () =>
       patchIncomeSource(row.id, {
         label: draft.label,
-        net_amount: draft.net ? Number(draft.net) : undefined,
-        gross_amount: draft.gross ? Number(draft.gross) : undefined,
+        net_amount: numOrNullFromString(draft.net) ?? undefined,
+        gross_amount: numOrNullFromString(draft.gross) ?? undefined,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['income-sources'] })
