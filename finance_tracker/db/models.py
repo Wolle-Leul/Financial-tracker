@@ -76,6 +76,8 @@ class IncomeSource(Base):
     net_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     use_net_only: Mapped[bool] = mapped_column(default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Pay day for this stream (1–31). None → use global salary_rules.salary_day for countdown math.
+    salary_day_of_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     user: Mapped[User] = relationship("User")
 

@@ -42,6 +42,16 @@ function numOrNullFromString(v: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/** Pay day 1–31 for an income stream; empty → use global pay day from settings. */
+function payDayOrNullFromString(v: string): number | null {
+  if (v.trim() === '') return null
+  const n = Number(v)
+  if (!Number.isFinite(n)) return null
+  const d = Math.round(n)
+  if (d < 1 || d > 31) return null
+  return d
+}
+
 export default function SettingsPage() {
   const nav = useNavigate()
   const qc = useQueryClient()
@@ -98,7 +108,7 @@ export default function SettingsPage() {
 
   /** Drafts mirror DB rows; global sync sends all of this in one POST /api/settings/sync transaction. */
   const [incomeDrafts, setIncomeDrafts] = useState<
-    Record<number, { label: string; net: string; gross: string }>
+    Record<number, { label: string; net: string; gross: string; payDay: string }>
   >({})
   const [recurringDrafts, setRecurringDrafts] = useState<
     Record<number, { amt: string | number; day: string | number }>
@@ -149,12 +159,14 @@ export default function SettingsPage() {
           label: row.label,
           net: String(row.net_amount ?? ''),
           gross: String(row.gross_amount ?? ''),
+          payDay: row.salary_day_of_month != null ? String(row.salary_day_of_month) : '',
         }
         return {
           id: row.id,
           label: (d.label.trim() || row.label).slice(0, 120),
           net_amount: numOrNullFromString(d.net),
           gross_amount: numOrNullFromString(d.gross),
+          salary_day_of_month: payDayOrNullFromString(d.payDay),
         }
       })
       const recurring_rows = (recurringQ.data ?? []).map((row) => {
@@ -251,6 +263,7 @@ export default function SettingsPage() {
     gross_amount: '' as string | number,
     net_amount: '' as string | number,
     use_net_only: true,
+    pay_day: '',
   })
 
   const addIncome = useMutation({
@@ -263,6 +276,7 @@ export default function SettingsPage() {
         net_amount: Number(newIncome.net_amount) || undefined,
         use_net_only: newIncome.use_net_only,
         sort_order: 0,
+        salary_day_of_month: payDayOrNullFromString(newIncome.pay_day),
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['income-sources'] })
@@ -405,7 +419,10 @@ export default function SettingsPage() {
       <section className="panel">
         <div className="panel-header">
           <h2>Income sources</h2>
-          <p className="panel-desc">Expected monthly net (used vs actual bank income on the dashboard). Use gross + calculator or enter net directly.</p>
+          <p className="panel-desc">
+            Name each stream, set expected net (and gross + contract if you use the calculator). Optional pay day per row
+            overrides the global pay day for the countdown; leave empty to follow Settings → Pay day.
+          </p>
         </div>
         <div className="settings-grid">
           <label className="label">
@@ -462,6 +479,18 @@ export default function SettingsPage() {
               onChange={(e) => setNewIncome((p) => ({ ...p, net_amount: e.target.value }))}
             />
           </label>
+          <label className="label">
+            Pay day (optional)
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={31}
+              placeholder="Uses global if empty"
+              value={newIncome.pay_day}
+              onChange={(e) => setNewIncome((p) => ({ ...p, pay_day: e.target.value }))}
+            />
+          </label>
         </div>
         <div className="filter-row-dates">
           {!newIncome.use_net_only && (
@@ -495,6 +524,7 @@ export default function SettingsPage() {
                 label: row.label,
                 net: String(row.net_amount ?? ''),
                 gross: String(row.gross_amount ?? ''),
+                payDay: row.salary_day_of_month != null ? String(row.salary_day_of_month) : '',
               }
             return (
               <IncomeRow
@@ -712,6 +742,7 @@ function IncomeRow({
         label: draft.label,
         net_amount: numOrNullFromString(draft.net) ?? undefined,
         gross_amount: numOrNullFromString(draft.gross) ?? undefined,
+        salary_day_of_month: payDayOrNullFromString(draft.payDay ?? ''),
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['income-sources'] })
@@ -749,6 +780,16 @@ function IncomeRow({
         placeholder="Net"
         value={draft.net}
         onChange={(e) => onDraftChange({ ...draft, net: e.target.value })}
+      />
+      <input
+        className="input"
+        type="number"
+        min={1}
+        max={31}
+        title="Pay day of month (empty = use global pay day above)"
+        placeholder="Pay day"
+        value={draft.payDay ?? ''}
+        onChange={(e) => onDraftChange({ ...draft, payDay: e.target.value })}
       />
       <button type="button" className="btn ghost" onClick={() => patch.mutate()}>
         Save row

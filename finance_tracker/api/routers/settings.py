@@ -106,6 +106,7 @@ def sync_settings_to_database(request: Request, body: SettingsSyncRequest) -> Se
             row.label = item.label.strip()
             row.net_amount = item.net_amount
             row.gross_amount = item.gross_amount
+            row.salary_day_of_month = item.salary_day_of_month
             income_updated += 1
 
         for rec in body.recurring_rows:

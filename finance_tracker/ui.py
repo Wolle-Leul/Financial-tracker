@@ -2,19 +2,20 @@ from __future__ import annotations
 
 import calendar
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional, Tuple
 
 import pandas as pd
 from sqlalchemy import func, select
 import streamlit as st
 
 from .auth import check_password
-from .calendar_plot import generate_calendar_html
+from .calendar_plot import build_calendar_salary_markers_for_month, generate_calendar_html
 from .charts import make_sankey_income_expense
 from .demo_data import get_demo_incomes
 from .holidays import get_holidays_poland
 from .metrics import compute_dashboard_metrics_from_db, compute_kpi_cards, resolve_budget_target_ratio
 from .salary import compute_salary_dates
+from .salary_countdown import compute_salary_countdown
 from .services.import_service import import_statement_pdf
 from .db.models import Category, Import as ImportModel, SubCategory, Transaction
 from .db.seed import ensure_demo_categories_seeded
@@ -349,7 +350,7 @@ def render_app() -> None:
         expense_total=expense_total,
         groceries_total=groceries_total,
         days_from_prev_salary=metrics.days_from_prev_salary,
-        days_till_next_salary=metrics.days_till_next_salary,
+        days_till_next_salary=salary_cd.days,
         target_vs_actual_percent=metrics.target_vs_actual_percent,
         budget_variance=budget_variance,
         budget_remaining=budget_remaining,
@@ -384,16 +385,21 @@ def render_app() -> None:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.text(f"{metrics.days_till_next_salary} days left for infy")
+        st.text(salary_cd.label_text)
         with st.expander("Calendar", expanded=False):
             st.subheader("📅 Calendar")
+            _cal_dom = int(salary_rule.salary_day_of_month)
+            _cal_markers = build_calendar_salary_markers_for_month(
+                year, month, holidays_all, _cal_dom, income_countdown_rows
+            )
             st.markdown(
                 generate_calendar_html(
                     year=year,
                     month=month,
                     holidays=holidays_all,
                     today=today,
-                    salary_date=int(salary_rule.salary_day_of_month),
+                    salary_date=_cal_dom,
+                    salary_markers_by_day=_cal_markers if _cal_markers else None,
                 ),
                 unsafe_allow_html=True,
             )
@@ -401,7 +407,7 @@ def render_app() -> None:
     with col2:
         due_title = '<p style="font-family:sans-serif; color:#89CFF0; font-size: 16px;">Due date </p>'
         st.markdown(due_title, unsafe_allow_html=True)
-        st.text(str(metrics.due_salary_date.strftime("%Y-%m-%d")))
+        st.text(str(salary_cd.due_date.strftime("%Y-%m-%d")))
 
         groceries_title = '<p style="font-family:sans-serif; color:#89CFF0; font-size: 16px;">Groceries </p>'
         st.markdown(groceries_title, unsafe_allow_html=True)

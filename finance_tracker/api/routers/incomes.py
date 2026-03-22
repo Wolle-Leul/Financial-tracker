@@ -22,6 +22,7 @@ def _to_item(r: IncomeSource) -> IncomeSourceItem:
         net_amount=float(r.net_amount) if r.net_amount is not None else None,
         use_net_only=bool(r.use_net_only),
         sort_order=int(r.sort_order),
+        salary_day_of_month=int(r.salary_day_of_month) if r.salary_day_of_month is not None else None,
     )
 
 
@@ -54,6 +55,7 @@ def create_income_source(request: Request, body: IncomeSourceCreate) -> IncomeSo
             net_amount=body.net_amount,
             use_net_only=body.use_net_only,
             sort_order=int(body.sort_order),
+            salary_day_of_month=body.salary_day_of_month,
         )
         session.add(row)
         session.flush()
@@ -70,6 +72,7 @@ def patch_income_source(request: Request, source_id: int, body: IncomeSourcePatc
         ).scalar_one_or_none()
         if row is None:
             raise HTTPException(status_code=404, detail="Income source not found")
+        patch = body.model_dump(exclude_unset=True)
         if body.label is not None:
             row.label = body.label.strip()
         if body.employer_name is not None:
@@ -84,6 +87,8 @@ def patch_income_source(request: Request, source_id: int, body: IncomeSourcePatc
             row.use_net_only = body.use_net_only
         if body.sort_order is not None:
             row.sort_order = int(body.sort_order)
+        if "salary_day_of_month" in patch:
+            row.salary_day_of_month = patch["salary_day_of_month"]
         return _to_item(row)
 
 

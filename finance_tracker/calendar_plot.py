@@ -3,9 +3,52 @@ from __future__ import annotations
 import calendar
 import textwrap
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .salary import generate_salaryday
+
+
+def build_calendar_salary_markers_for_month(
+    year: int,
+    month: int,
+    holidays: List[str],
+    default_dom: int,
+    income_rows: List[Tuple[str, Optional[int]]],
+) -> Dict[int, str]:
+    """
+    Map calendar day-of-month → tooltip for green pay markers.
+
+    Uses the same weekend/holiday shifting as the rest of the app. Includes the
+    global default pay day plus each income stream (per-stream day or default).
+    """
+    day_labels: dict[int, set[str]] = {}
+    seen_pairs: set[tuple[int, str]] = set()
+
+    def push(dom: int, label: str) -> None:
+        dom = max(1, min(31, int(dom)))
+        dt = generate_salaryday(year, month, holidays, salary_date=dom)
+        if dt.year != year or dt.month != month:
+            return
+        pair = (dt.day, label)
+        if pair in seen_pairs:
+            return
+        seen_pairs.add(pair)
+        day_labels.setdefault(dt.day, set()).add(label)
+
+    sd = max(1, min(31, int(default_dom)))
+    push(sd, "Primary schedule")
+    for lab, dom_opt in income_rows:
+        dom = int(dom_opt) if dom_opt is not None else sd
+        push(dom, (lab or "Income").strip() or "Income")
+
+    out: dict[int, str] = {}
+    for day in sorted(day_labels.keys()):
+        labels = sorted(day_labels[day])
+        if len(labels) == 1:
+            out[day] = f"Pay — {labels[0]}"
+        else:
+            out[day] = "Pay — " + " · ".join(labels)
+    return out
 
 
 def _escape_html(value: str) -> str:
@@ -24,13 +67,15 @@ def generate_calendar_html(
     holidays: List[str],
     today: datetime,
     salary_date: int = 10,
+    *,
+    salary_markers_by_day: Optional[Dict[int, str]] = None,
 ) -> str:
     """
     Premium HTML/CSS calendar grid (Mon..Sun).
 
     Markers:
     - Holidays: red dot + tooltip (reason if provided by caller; currently only date list is provided)
-    - Salary date: green dot
+    - Salary date: green dot (one or many tooltips via ``salary_markers_by_day``)
     - Today: blue ring
     """
     first_day_of_month = datetime(year, month, 1)
@@ -49,8 +94,11 @@ def generate_calendar_html(
         if dt.year == year and dt.month == month:
             holiday_days.add(dt.day)
 
-    salary_dt = generate_salaryday(year, month, holidays, salary_date=salary_date)
-    salary_day: Optional[int] = salary_dt.day if salary_dt.month == month else None
+    use_marker_map = salary_markers_by_day is not None and len(salary_markers_by_day) > 0
+    legacy_salary_day: Optional[int] = None
+    if not use_marker_map:
+        salary_dt = generate_salaryday(year, month, holidays, salary_date=salary_date)
+        legacy_salary_day = salary_dt.day if salary_dt.month == month else None
 
     today_day: Optional[int] = today.day if today.month == month and today.year == year else None
 
@@ -69,7 +117,10 @@ def generate_calendar_html(
         if today_day is not None and day_num == today_day:
             classes.append("calToday")
             marker_tooltip = "Today"
-        elif salary_day is not None and day_num == salary_day:
+        elif use_marker_map and day_num in (salary_markers_by_day or {}):
+            classes.append("calSalary")
+            marker_tooltip = (salary_markers_by_day or {})[day_num]
+        elif not use_marker_map and legacy_salary_day is not None and day_num == legacy_salary_day:
             classes.append("calSalary")
             marker_tooltip = "Salary day"
         elif day_num in holiday_days:
